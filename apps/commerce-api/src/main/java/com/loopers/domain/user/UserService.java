@@ -20,4 +20,8 @@ public class UserService {
         }
 		return userRepository.save(userEntity);
 	}
+
+	public UserEntity findByUserId(String userId) {
+		return userRepository.findByUserId(userId).orElse(null);
+	}
 }

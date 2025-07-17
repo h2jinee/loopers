@@ -21,17 +21,15 @@ import com.loopers.interfaces.api.ApiResponse;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class UserV1ApiE2ETest {
-	/**
-	 * 회원가입 E2E 테스트
-	    - [x]  회원 가입이 성공할 경우, 생성된 유저 정보를 응답으로 반환한다.
- 	    - [x]  회원 가입 시에 성별이 없을 경우, 400 Bad Request 응답을 반환한다.
-		- [x]  내 정보 조회에 성공할 경우, 해당하는 유저 정보를 응답으로 반환한다.
-		- [x]  존재하지 않는 ID 로 조회할 경우, 404 Not Found 응답을 반환한다.
-	 */
 
 	@Autowired
 	private TestRestTemplate testRestTemplate;
 
+	/**
+	 * 회원 가입 E2E 테스트
+	 - [x]  회원 가입이 성공할 경우, 생성된 유저 정보를 응답으로 반환한다.
+	 - [x]  회원 가입 시에 성별이 없을 경우, 400 Bad Request 응답을 반환한다.
+	 */
 	@DisplayName("POST /api/v1/users")
 	@Nested
 	class Join {
@@ -100,6 +98,11 @@ public class UserV1ApiE2ETest {
 		}
 	}
 
+	/**
+	 * 내 정보 조회 E2E 테스트
+	 - [x]  내 정보 조회에 성공할 경우, 해당하는 유저 정보를 응답으로 반환한다.
+	 - [x]  존재하지 않는 ID로 조회할 경우, 404 Not Found 응답을 반환한다.
+	*/
 	@DisplayName("GET /api/v1/users/{userId}")
 	@Nested
 	class GetMyInfo {
