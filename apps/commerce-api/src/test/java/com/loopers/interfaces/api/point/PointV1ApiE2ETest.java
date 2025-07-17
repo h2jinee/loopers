@@ -47,7 +47,7 @@ public class PointV1ApiE2ETest {
 	 */
 	@DisplayName("GET /api/v1/point")
 	@Nested
-	class getUsersPoint {
+	class getUserPoint {
 		private final String ENDPOINT = "/api/v1/point";
 
 		@DisplayName("포인트 조회에 성공할 경우, 보유 포인트를 응답으로 반환한다.")

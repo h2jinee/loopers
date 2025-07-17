@@ -11,8 +11,8 @@ import com.loopers.domain.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 @Repository
+@RequiredArgsConstructor
 public class UserRepositoryImpl implements UserRepository {
 
 	// TODO DB 추가 시 Map -> DB 변경해야 함.

@@ -12,9 +12,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "member")
 @Getter
 @NoArgsConstructor
+@Table(name = "member")
 public class UserEntity extends BaseEntity {
 
 	@Id

@@ -104,7 +104,7 @@ public class UserServiceIntegrationTest {
 	class GetUserInfo {
 		@DisplayName("해당 ID의 회원이 존재할 경우, 회원 정보가 반환된다.")
 		@Test
-		void returnsUserInfo_whenUserExists() {
+		void returnsUserInfo_whenUserIdExists() {
 			// arrange
 			UserEntity user = new UserEntity(
 				"h2jinee",
@@ -116,7 +116,7 @@ public class UserServiceIntegrationTest {
 			userService.save(user);
 
 			// act
-			UserEntity foundUser = userService.findByUserId("h2jinee");
+			UserEntity foundUser = userService.getUserInfo("h2jinee");
 
 			// assert
 			assertThat(foundUser).isNotNull();
@@ -125,7 +125,7 @@ public class UserServiceIntegrationTest {
 
 		@DisplayName("해당 ID의 회원이 존재하지 않을 경우, null이 반환된다.")
 		@Test
-		void returnsNull_whenUserDoesNotExist() {
+		void returnsNull_whenUserIdDoesNotExist() {
 			// arrange
 			UserEntity user = new UserEntity(
 				"h2jinee",
@@ -137,7 +137,7 @@ public class UserServiceIntegrationTest {
 			userService.save(user);
 
 			// act
-			UserEntity foundUser = userService.findByUserId("devin");
+			UserEntity foundUser = userService.getUserInfo("devin");
 
 			// assert
 			assertThat(foundUser).isNull();
