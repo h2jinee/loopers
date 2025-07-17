@@ -25,8 +25,8 @@ public class UserV1ApiE2ETest {
 	 * 회원가입 E2E 테스트
 	    - [x]  회원 가입이 성공할 경우, 생성된 유저 정보를 응답으로 반환한다.
  	    - [x]  회원 가입 시에 성별이 없을 경우, 400 Bad Request 응답을 반환한다.
-		- [ ]  내 정보 조회에 성공할 경우, 해당하는 유저 정보를 응답으로 반환한다.
-		- [ ]  존재하지 않는 ID 로 조회할 경우, 404 Not Found 응답을 반환한다.
+		- [x]  내 정보 조회에 성공할 경우, 해당하는 유저 정보를 응답으로 반환한다.
+		- [x]  존재하지 않는 ID 로 조회할 경우, 404 Not Found 응답을 반환한다.
 	 */
 
 	@Autowired
@@ -55,18 +55,19 @@ public class UserV1ApiE2ETest {
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.POST, new HttpEntity<>(signUpRequest), responseType);
 
 			// assert
-			assertAll(
-				() -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
-				() -> assertThat(response.getBody()).isNotNull(),
-				() -> {
-					assertNotNull(response.getBody());
-					assertThat(response.getBody().data().name()).isEqualTo(signUpRequest.name());
-				},
-				() -> {
-					assertNotNull(response.getBody());
-					assertThat(response.getBody().data().gender()).isEqualTo(UserV1Dto.UserResponse.GenderResponse.F);
-				}
-			);
+			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+			ApiResponse<UserV1Dto.UserResponse> body = response.getBody();
+			assertThat(body).isNotNull();
+			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
+
+			UserV1Dto.UserResponse data = body.data();
+			assertThat(data).isNotNull();
+			assertThat(data.userId()).isEqualTo(signUpRequest.userId());
+			assertThat(data.name()).isEqualTo(signUpRequest.name());
+			assertThat(data.gender()).isEqualTo(UserV1Dto.UserResponse.GenderResponse.F);
+			assertThat(data.birth()).isEqualTo(signUpRequest.birth());
+			assertThat(data.email()).isEqualTo(signUpRequest.email());
 
 		}
 		@DisplayName("회원 가입 시에 성별이 없을 경우, 400 Bad Request 응답을 반환한다.")
@@ -91,13 +92,11 @@ public class UserV1ApiE2ETest {
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.POST, new HttpEntity<>(requestBody, headers), responseType);
 
 			// assert
-			assertAll(
-				() -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST),
-				() -> {
-					assertNotNull(response.getBody());
-					assertThat(response.getBody().meta().result()).isEqualTo(ApiResponse.Metadata.Result.FAIL);
-				}
-			);
+			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+			ApiResponse<UserV1Dto.UserResponse> body = response.getBody();
+			assertThat(body).isNotNull();
+			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.FAIL);
 		}
 	}
 
@@ -110,22 +109,42 @@ public class UserV1ApiE2ETest {
 		@Test
 		void returnsUserInfo_whenUserExists() {
 			// arrange
+			String userId = "h2jinee";
 
 			// act
+			ParameterizedTypeReference<ApiResponse<UserV1Dto.UserResponse>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<UserV1Dto.UserResponse>> response =
+				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, null, responseType, userId);
 
 			// assert
+			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
+			ApiResponse<UserV1Dto.UserResponse> body = response.getBody();
+			assertThat(body).isNotNull();
+			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
+
+			UserV1Dto.UserResponse data = body.data();
+			assertThat(data).isNotNull();
+			assertThat(data.userId()).isEqualTo(userId);
 		}
 
 		@DisplayName("존재하지 않는 ID 로 조회할 경우, 404 Not Found 응답을 반환한다.")
 		@Test
 		void returnsNotFound_whenUserDoesNotExist() {
 			// arrange
+			String userId = "devin";
 
 			// act
+			ParameterizedTypeReference<ApiResponse<UserV1Dto.UserResponse>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<UserV1Dto.UserResponse>> response =
+				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, null, responseType, userId);
 
 			// assert
+			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
+			ApiResponse<UserV1Dto.UserResponse> body = response.getBody();
+			assertThat(body).isNotNull();
+			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.FAIL);
 		}
 	}
 }

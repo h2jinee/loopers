@@ -1,5 +1,6 @@
 package com.loopers.interfaces.api.user;
 
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -7,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -28,10 +31,23 @@ public class UserV1ApiController implements UserV1ApiSpec {
 		);
 	}
 
+	@GetMapping("{userId}")
 	@Override
 	public ApiResponse<UserV1Dto.UserResponse> getMyInfo(
 		@PathVariable String userId
 	) {
-		return null;
+		if ("h2jinee".equals(userId)) {
+			return ApiResponse.success(
+				new UserV1Dto.UserResponse(
+					userId,
+					"전희진",
+					UserV1Dto.UserResponse.GenderResponse.F,
+					"1997-01-18",
+					"wjsgmlwls97@gmail.com"
+				)
+			);
+		} else {
+			throw new CoreException(ErrorType.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+		}
 	}
 }
