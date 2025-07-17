@@ -32,14 +32,16 @@ public class UserTest {
 		final String name = "전희진";
 		final String email = "wjsgmlwls97@gmail.com";
 		final String birth = "1997-01-18";
+		final UserEntity.Gender gender = UserEntity.Gender.F;
 
 		// act
 		final CoreException exception = assertThrows(CoreException.class, () -> {
 			new UserEntity(
 				userId,
 				name,
-				email,
-				birth
+				gender,
+				birth,
+				email
 			);
 		});
 
@@ -60,14 +62,16 @@ public class UserTest {
 		final String userId = "h2jinee";
 		final String name = "전희진";
 		final String birth = "1997-01-18";
+		final UserEntity.Gender gender = UserEntity.Gender.F;
 
 		// act
 		final CoreException exception = assertThrows(CoreException.class, () -> {
 			new UserEntity(
 				userId,
 				name,
-				email,
-				birth
+				gender,
+				birth,
+				email
 			);
 		});
 
@@ -90,14 +94,16 @@ public class UserTest {
 		final String userId = "h2jinee";
 		final String name = "전희진";
 		final String email = "wjsgmlwls97@gmail.com";
+		final UserEntity.Gender gender = UserEntity.Gender.F;
 
 		// act
 		final CoreException exception = assertThrows(CoreException.class, () -> {
 			new UserEntity(
 				userId,
 				name,
-				email,
-				birth
+				gender,
+				birth,
+				email
 			);
 		});
 

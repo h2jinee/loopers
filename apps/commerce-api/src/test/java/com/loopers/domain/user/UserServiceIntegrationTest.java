@@ -45,8 +45,9 @@ public class UserServiceIntegrationTest {
 			UserEntity user = new UserEntity(
 				"h2jinee",
 				"전희진",
-				"wjsgmlwls97@gmail.com",
-				"1997-01-18"
+				UserEntity.Gender.F,
+				"1997-01-18",
+				"wjsgmlwls97@gmail.com"
 			);
 
 			// act
@@ -69,15 +70,17 @@ public class UserServiceIntegrationTest {
 			UserEntity user = new UserEntity(
 				"h2jinee",
 				"전희진",
-				"wjsgmlwls97@gmail.com",
-				"1997-01-18"
+				UserEntity.Gender.F,
+				"1997-01-18",
+				"wjsgmlwls97@gmail.com"
 			);
 
 			UserEntity newUser = new UserEntity(
 				"h2jinee",
 				"김데빈",
-				"devin@loopers.com",
-				"2000-01-01"
+				UserEntity.Gender.M,
+				"2000-01-01",
+				"devin@loopers.com"
 			);
 
 			// act
@@ -98,7 +101,7 @@ public class UserServiceIntegrationTest {
 	*/
 	@DisplayName("내 정보 조회 시")
 	@Nested
-	class GetMyInfo {
+	class GetUserInfo {
 		@DisplayName("해당 ID의 회원이 존재할 경우, 회원 정보가 반환된다.")
 		@Test
 		void returnsUserInfo_whenUserExists() {
@@ -106,8 +109,9 @@ public class UserServiceIntegrationTest {
 			UserEntity user = new UserEntity(
 				"h2jinee",
 				"전희진",
-				"wjsgmlwls97@gmail.com",
-				"1997-01-18"
+				UserEntity.Gender.F,
+				"1997-01-18",
+				"wjsgmlwls97@gmail.com"
 			);
 			userService.save(user);
 
@@ -126,8 +130,9 @@ public class UserServiceIntegrationTest {
 			UserEntity user = new UserEntity(
 				"h2jinee",
 				"전희진",
-				"wjsgmlwls97@gmail.com",
-				"1997-01-18"
+				UserEntity.Gender.F,
+				"1997-01-18",
+				"wjsgmlwls97@gmail.com"
 			);
 			userService.save(user);
 

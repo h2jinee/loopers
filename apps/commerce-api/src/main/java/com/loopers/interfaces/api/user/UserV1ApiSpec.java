@@ -16,7 +16,7 @@ public interface UserV1ApiSpec {
 	);
 
 	@Operation(summary = "내 정보 조회")
-	ApiResponse<UserV1Dto.UserResponse> getMyInfo(
+	ApiResponse<UserV1Dto.UserResponse> getUserInfo(
 		@PathVariable String userId
 	);
 }
