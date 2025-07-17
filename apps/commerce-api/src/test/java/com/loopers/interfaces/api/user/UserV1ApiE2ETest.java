@@ -64,7 +64,7 @@ public class UserV1ApiE2ETest {
 				},
 				() -> {
 					assertNotNull(response.getBody());
-					assertThat(response.getBody().data().gender()).isEqualTo(UserV1Dto.GenderResponse.F);
+					assertThat(response.getBody().data().gender()).isEqualTo(UserV1Dto.UserResponse.GenderResponse.F);
 				}
 			);
 

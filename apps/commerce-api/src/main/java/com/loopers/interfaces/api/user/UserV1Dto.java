@@ -36,10 +36,10 @@ public class UserV1Dto {
 		GenderResponse gender,
 		String birth,
 		String email
-	) { }
-
-	public enum GenderResponse {
-		M,
-		F
+	) {
+		enum GenderResponse {
+			M,
+			F
+		}
 	}
 }

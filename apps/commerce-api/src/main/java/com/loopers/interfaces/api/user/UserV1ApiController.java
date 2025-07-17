@@ -1,5 +1,6 @@
 package com.loopers.interfaces.api.user;
 
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,10 +21,17 @@ public class UserV1ApiController implements UserV1ApiSpec {
 			new UserV1Dto.UserResponse(
 				"h2jinee",
 				"전희진",
-				UserV1Dto.GenderResponse.F,
+				UserV1Dto.UserResponse.GenderResponse.F,
 				"1997-01-18",
 				"wjsgmlwls97@gmail.com"
 			)
 		);
+	}
+
+	@Override
+	public ApiResponse<UserV1Dto.UserResponse> getMyInfo(
+		@PathVariable String userId
+	) {
+		return null;
 	}
 }
