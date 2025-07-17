@@ -1,7 +1,6 @@
 package com.loopers.interfaces.api.user;
 
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
+import com.loopers.domain.user.UserValidator;
 
 import jakarta.validation.constraints.NotNull;
 
@@ -19,11 +18,13 @@ public class UserV1Dto {
 		String email
 	) {
 		public SignUpRequest {
-			if (gender == null) {
-				throw new CoreException(ErrorType.BAD_REQUEST, "성별은 필수 값입니다.");
-			}
+			UserValidator.validateGender(gender);
+			UserValidator.validateUserId(userId);
+			UserValidator.validateEmail(email);
+			UserValidator.validateBirth(birth);
 		}
-		enum GenderRequest {
+		
+		public enum GenderRequest {
 			M,
 			F
 		}
@@ -37,7 +38,7 @@ public class UserV1Dto {
 		String email
 	) { }
 
-	enum GenderResponse {
+	public enum GenderResponse {
 		M,
 		F
 	}
