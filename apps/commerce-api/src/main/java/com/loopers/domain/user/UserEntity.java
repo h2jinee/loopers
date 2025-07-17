@@ -1,7 +1,6 @@
 package com.loopers.domain.user;
 
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
+import com.loopers.domain.BaseEntity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -13,7 +12,8 @@ import lombok.NoArgsConstructor;
 @Table(name = "member")
 @Getter
 @NoArgsConstructor
-public class UserEntity {
+public class UserEntity extends BaseEntity {
+
 	@Id
 	private String userId;
 	private String name;
