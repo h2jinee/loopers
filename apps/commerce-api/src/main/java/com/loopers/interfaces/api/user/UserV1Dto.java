@@ -42,15 +42,15 @@ public class UserV1Dto {
 		String birth,
 		String email
 	) {
-		public static UserResponse from(UserEntity entity) {
+		public static UserResponse from(UserEntity userEntity) {
 			return new UserResponse(
-				entity.getUserId(),
-				entity.getName(),
-				entity.getGender() == UserEntity.Gender.M
+				userEntity.getUserId(),
+				userEntity.getName(),
+				userEntity.getGender() == UserEntity.Gender.M
 					? GenderResponse.M
 					: GenderResponse.F,
-				entity.getBirth(),
-				entity.getEmail()
+				userEntity.getBirth(),
+				userEntity.getEmail()
 			);
 		}
 
