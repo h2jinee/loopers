@@ -20,11 +20,30 @@ public class PointEntity extends BaseEntity {
 
 	private Long point;
 
-	public PointEntity(String userId, Long point) {
-		if (point == null || point <= 0) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "포인트는 0보다 큰 값이어야 합니다.");
+	public PointEntity(
+		String userId,
+		Long point
+	) {
+		if (point == null || point < 0) {
+			throw new CoreException(
+				ErrorType.BAD_REQUEST,
+				"포인트는 0 이상이어야 합니다."
+			);
 		}
 		this.userId = userId;
 		this.point = point;
 	}
+
+	public static PointEntity charge(String userId, Long point) {
+		if (point == null || point <= 0) {
+			throw new CoreException(
+				ErrorType.BAD_REQUEST,
+				"충전 금액은 0보다 커야 합니다."
+			);
+		}
+		return new PointEntity(
+			userId,
+			point
+		);
+	};
 }

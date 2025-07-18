@@ -2,6 +2,7 @@ package com.loopers.interfaces.api.user;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import com.loopers.domain.point.PointRepository;
+import com.loopers.domain.user.UserRepository;
 import com.loopers.interfaces.api.ApiResponse;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -24,6 +27,12 @@ public class UserV1ApiE2ETest {
 
 	@Autowired
 	private TestRestTemplate testRestTemplate;
+
+	@Autowired
+	private UserRepository userRepository;
+
+	@Autowired
+	private PointRepository pointRepository;
 
 	@BeforeEach
 	void setUp() {
@@ -35,6 +44,13 @@ public class UserV1ApiE2ETest {
 			"wjsgmlwls97@gmail.com"
 		);
 		testRestTemplate.postForEntity("/api/v1/users", signUpRequest, ApiResponse.class);
+	}
+
+	// TODO Repository 주입을 안 받게 할 수는 없을까?
+	@AfterEach
+	void tearDown() {
+		userRepository.clear();
+		pointRepository.clear();
 	}
 
 	/**

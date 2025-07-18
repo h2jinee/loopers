@@ -22,7 +22,7 @@ public class PointTest {
 		-1,
 		-1000000000,
 		-2000,
-		0,
+		0
 	})
 	void fail_whenPointIsNotPositive(Long point) {
 		// arrange
@@ -30,13 +30,11 @@ public class PointTest {
 
 		// act
 		final CoreException exception = assertThrows(CoreException.class, () -> {
-			new PointEntity(
-				userId,
-				point
-			);
+			PointEntity.charge(userId, point);
 		});
 
 		// assert
 		assertThat(exception.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST);
+		assertThat(exception.getMessage()).isEqualTo("충전 금액은 0보다 커야 합니다.");
 	}
 }

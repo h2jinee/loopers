@@ -45,6 +45,10 @@ public class UserV1ApiController implements UserV1ApiSpec {
 	public ApiResponse<UserV1Dto.UserResponse> getUserInfo(
 		@PathVariable String userId
 	) {
-		return ApiResponse.success(UserV1Dto.UserResponse.from(userService.getUserInfo(userId)));
+		UserEntity user = userService.getUserInfo(userId);
+		if (user == null) {
+			throw new CoreException(ErrorType.NOT_FOUND, "존재하지 않는 사용자입니다.");
+		}
+		return ApiResponse.success(UserV1Dto.UserResponse.from(user));
 	}
 }
