@@ -1,6 +1,7 @@
 package com.loopers.domain.point;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assert.assertThrows;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +14,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import com.loopers.domain.user.UserEntity;
 import com.loopers.domain.user.UserRepository;
 import com.loopers.domain.user.UserService;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 
 @SpringBootTest
 public class PointServiceIntegrationTest {
@@ -29,12 +32,6 @@ public class PointServiceIntegrationTest {
 	@Autowired
 	private PointRepository pointRepository;
 
-	@AfterEach
-	void tearDown() {
-		userRepository.clear();
-		pointRepository.clear();
-	}
-
 	@BeforeEach
 	void setUp() {
 		UserEntity user = new UserEntity(
@@ -45,6 +42,12 @@ public class PointServiceIntegrationTest {
 			"wjsgmlwls97@gmail.com"
 		);
 		userService.save(user);
+	}
+
+	@AfterEach
+	void tearDown() {
+		userRepository.clear();
+		pointRepository.clear();
 	}
 
 	/*
@@ -80,6 +83,32 @@ public class PointServiceIntegrationTest {
 
 			// assert
 			assertThat(point).isNull();
+		}
+	}
+
+	/*
+	* 포인트 충전 통합 테스트
+	- [x]  존재하지 않는 유저 ID로 충전을 시도한 경우, 실패한다.
+	*/
+	@DisplayName("포인트 충전 시")
+	@Nested
+	class chargeUserPoint {
+		@DisplayName("존재하지 않는 유저 ID로 충전을 시도한 경우, 실패한다.")
+		@Test
+		void fail_whenUserDoesNotExist() {
+			// arrange
+			String userId = "devin";
+
+			// act
+			CoreException exception = assertThrows(CoreException.class, () -> {
+				pointService.save(new PointEntity(
+					userId,
+				1000L
+				));
+			});
+
+			// assert
+			assertThat(exception.getErrorType()).isEqualTo(ErrorType.NOT_FOUND);
 		}
 	}
 }

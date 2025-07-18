@@ -1,7 +1,6 @@
 package com.loopers.interfaces.api.user;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,9 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-import com.loopers.domain.user.UserEntity;
-import com.loopers.domain.user.UserRepository;
-import com.loopers.domain.user.UserService;
 import com.loopers.interfaces.api.ApiResponse;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

@@ -29,6 +29,9 @@ public class UserService {
 	}
 
 	public UserEntity getUserInfo(String userId) {
+		if (userId == null) {
+			throw new CoreException(ErrorType.NOT_FOUND, "존재하지 않는 사용자입니다.");
+		}
 		return userRepository.findByUserId(userId).orElse(null);
 	}
 }
