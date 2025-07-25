@@ -270,7 +270,7 @@ sequenceDiagram
     end
 ```
 
-## 7. 주문
+## 7. 주문 생성
 
 ```mermaid
 sequenceDiagram
@@ -279,8 +279,8 @@ sequenceDiagram
     participant OS as OrderService
     participant PS as ProductService
     participant US as UserService
-    participant PtS as PointService
     participant OR as OrderRepository
+    participant OLR as OrderLineRepository
     participant PR as ProductRepository
     participant UR as UserRepository
     participant DB as Database
@@ -313,42 +313,128 @@ sequenceDiagram
             UR-->>US: 사용자 엔티티
             US-->>OS: 사용자 정보
             
-            OS->>PtS: 포인트 잔액 확인
-            PtS-->>OS: 포인트 잔액
+            OS->>DB: 트랜잭션 시작
             
-            alt 포인트 부족
-                OS-->>C: 포인트 부족
-                C-->>U: 포인트가 부족합니다
-            else 포인트 결제 가능
-                OS->>DB: 트랜잭션 시작
+            OS->>PS: 재고 임시 차감
+            PS->>PR: 재고 업데이트 (임시)
+            PR->>DB: 재고 차감
+            
+            OS->>OS: 주문 총액 계산<br/>(상품금액 + 배송비)
+            
+            OS->>OR: 주문 생성 (결제대기 상태)
+            OR->>DB: 주문 저장
+            DB-->>OR: 주문 ID
+            
+            OS->>OLR: 주문 상세 생성
+            OLR->>DB: 주문 상세 저장<br/>(주문 ID, 상품 ID, 수량=1, 가격)
+            
+            OS->>DB: 트랜잭션 커밋
+            
+            OS-->>C: 주문 생성 완료 (주문 ID)
+            C-->>U: 주문 생성 성공, 결제 진행 필요
+        end
+    end
+```
+
+## 8. 결제 처리
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Controller
+    participant PmtS as PaymentService
+    participant OS as OrderService
+    participant PS as ProductService
+    participant PtS as PointService
+    participant OR as OrderRepository
+    participant PR as ProductRepository
+    participant UR as UserRepository
+    participant DB as Database
+
+    U->>C: 결제 요청 (주문 ID)
+    C->>C: 사용자 인증 확인
+    
+    alt 미인증
+        C-->>U: 로그인 필요
+    else 인증됨
+        C->>PmtS: 결제 처리 요청
+        
+        PmtS->>OS: 주문 정보 조회
+        OS->>OR: 주문 조회
+        OR->>DB: 주문 데이터 조회
+        DB-->>OR: 주문 정보
+        
+        alt 주문 없음 또는 다른 사용자 주문
+            OR-->>OS: null 또는 권한 없음
+            OS-->>PmtS: 주문 조회 실패
+            PmtS-->>C: 주문 조회 불가
+            C-->>U: 주문을 찾을 수 없습니다
+        else 본인 주문
+            OR-->>OS: 주문 엔티티
+            
+            alt 주문 상태 != 결제대기
+                OS-->>PmtS: 결제 불가 상태
+                PmtS-->>C: 결제 진행 불가
+                C-->>U: 이미 처리된 주문입니다
+            else 결제 가능
+                PmtS->>PtS: 포인트 잔액 확인
+                PtS->>UR: 사용자 포인트 조회
+                UR->>DB: 포인트 데이터 조회
+                DB-->>UR: 포인트 잔액
+                UR-->>PtS: 포인트 정보
+                PtS-->>PmtS: 포인트 잔액
                 
-                OS->>PS: 재고 차감
-                PS->>PR: 재고 업데이트
-                PR->>DB: 재고 차감
-                
-                PS->>PS: 재고 확인
-                alt 재고가 0
-                    PS->>PR: 상품 상태 업데이트
-                    PR->>DB: 상품 상태 = '품절'
+                alt 포인트 부족
+                    PmtS-->>C: 포인트 부족
+                    C-->>U: 포인트가 부족합니다
+                else 포인트 결제 가능
+                    PmtS->>DB: 트랜잭션 시작
+                    
+                    PmtS->>PmtS: 주문 시간 재확인
+                    alt 주문 후 10분 초과
+                        PmtS->>DB: 트랜잭션 롤백
+                        
+                        PmtS->>PS: 임시 차감 재고 복원
+                        PS->>PR: 재고 복원
+                        PR->>DB: 재고 증가
+                        
+                        PmtS->>OS: 주문 상태 업데이트
+                        OS->>OR: 주문 상태 변경
+                        OR->>DB: 상태 = '주문취소'
+                        
+                        PmtS-->>C: 결제 시간 초과
+                        C-->>U: 결제 시간이 초과되었습니다
+                    else 시간 내
+                        PmtS->>PtS: 포인트 차감
+                        PtS->>UR: 포인트 업데이트
+                        UR->>DB: 포인트 차감
+                        
+                        PmtS->>OS: 주문 상태 업데이트
+                        OS->>OR: 주문 상태 변경
+                        OR->>DB: 상태 = '결제완료'
+                        
+                        PmtS->>PS: 재고 확정 차감
+                        PS->>PR: 재고 확정 처리
+                        PR->>DB: 재고 상태 확정
+                        
+                        PS->>PS: 재고 확인
+                        alt 재고가 0
+                            PS->>PR: 상품 상태 업데이트
+                            PR->>DB: 상품 상태 = '품절'
+                        end
+                        
+                        PmtS->>DB: 트랜잭션 커밋
+                        
+                        PmtS-->>C: 결제 완료
+                        C-->>U: 결제 성공
+                    end
                 end
-                
-                OS->>PtS: 포인트 차감
-                PtS->>UR: 포인트 업데이트
-                UR->>DB: 포인트 차감
-                
-                OS->>OR: 주문 생성
-                OR->>DB: 주문 저장 (결제완료)
-                
-                OS->>DB: 트랜잭션 커밋
-                
-                OS-->>C: 주문 완료
-                C-->>U: 주문 성공
             end
         end
     end
 ```
 
-## 8. 내 주문 목록 조회
+## 9. 내 주문 목록 조회
 
 ```mermaid
 sequenceDiagram
@@ -390,7 +476,7 @@ sequenceDiagram
     end
 ```
 
-## 9. 단일 주문 상세 조회
+## 10. 단일 주문 상세 조회
 
 ```mermaid
 sequenceDiagram
