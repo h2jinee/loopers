@@ -1,7 +1,7 @@
 ```mermaid
 classDiagram
     class User {
-        +userId: String
+        +userId: Long
         +email: String
         +gender: Gender
         +birthDate: Date
@@ -12,70 +12,96 @@ classDiagram
     }
 
     class Point {
-        +pointId: String
-        +userId: String
+        +pointId: Long
+        +userId: Long
         +balance: Integer
         +createdAt: DateTime
         +updatedAt: DateTime
+        +deletedAt: DateTime
         +getBalance(): Integer
         +checkSufficientBalance(amount: Integer): Boolean
     }
 
     class PointHistory {
-        +historyId: String
-        +userId: String
+        +historyId: Long
+        +userId: Long
         +amount: Integer
         +type: PointType
         +description: String
-        +orderId: String
+        +orderId: Long
         +createdAt: DateTime
+        +deletedAt: DateTime
+        +validateOrderIdConstraint()
     }
 
     class PointType {
         <<enumeration>>
         CHARGE
         USE
-        REFUND
     }
 
     class Product {
-        +productId: String
-        +brandId: String
+        +productId: Long
+        +brandId: Long
+        +categoryId: Long
         +code: String
         +nameKo: String
         +nameEn: String
         +price: Integer
         +description: String
         +stock: Integer
-        +tempReservedStock: Integer
         +status: ProductStatus
         +releaseYear: Integer
-        +category: String
         +shippingFee: Integer
         +createdAt: DateTime
         +updatedAt: DateTime
         +deletedAt: DateTime
-        +checkStock(): Boolean
+        +checkAvailableStock(): Integer
         +updateStock(quantity: Integer)
     }
 
     class Brand {
-        +brandId: String
+        +brandId: Long
         +nameKo: String
         +nameEn: String
-        +categories: List~String~
         +coverImageUrl: String
         +profileImageUrl: String
         +createdAt: DateTime
         +updatedAt: DateTime
         +deletedAt: DateTime
         +getBrandInfo()
-        +getCategories(): List~String~
+    }
+
+    class BrandCategory {
+        +categoryId: Long
+        +brandId: Long
+        +nameKo: String
+        +nameEn: String
+        +code: String
+        +displayOrder: Integer
+        +createdAt: DateTime
+        +updatedAt: DateTime
+        +deletedAt: DateTime
+    }
+
+    class StockReservation {
+        +reservationId: Long
+        +productId: Long
+        +orderId: Long
+        +quantity: Integer
+        +expiredAt: DateTime
+        +status: ReservationStatus
+        +createdAt: DateTime
+        +updatedAt: DateTime
+        +deletedAt: DateTime
+        +isExpired(): Boolean
+        +cancel()
+        +confirm()
     }
 
     class Order {
-        +orderId: String
-        +userId: String
+        +orderId: Long
+        +userId: Long
         +totalAmount: Integer
         +status: OrderStatus
         +receiverName: String
@@ -92,30 +118,33 @@ classDiagram
     }
 
     class OrderLine {
-        +orderLineId: String
-        +orderId: String
-        +productId: String
+        +orderLineId: Long
+        +orderId: Long
+        +productId: Long
         +quantity: Integer
         +price: Integer
         +createdAt: DateTime
         +updatedAt: DateTime
+        +deletedAt: DateTime
     }
 
     class Like {
-        +likeId: String
-        +userId: String
-        +productId: String
+        +likeId: Long
+        +userId: Long
+        +productId: Long
         +createdAt: DateTime
+        +deletedAt: DateTime
     }
 
     class ProductImage {
-        +imageId: String
-        +productId: String
+        +imageId: Long
+        +productId: Long
         +imageUrl: String
         +imageType: ImageType
         +displayOrder: Integer
         +createdAt: DateTime
         +updatedAt: DateTime
+        +deletedAt: DateTime
     }
 
     class ImageType {
@@ -125,31 +154,34 @@ classDiagram
     }
 
     class LikeAggregation {
-        +productId: String
+        +productId: Long
         +likeCount: Integer
         +lastBatchTime: DateTime
         +createdAt: DateTime
         +updatedAt: DateTime
+        +deletedAt: DateTime
     }
 
     class Payment {
-        +paymentId: String
-        +orderId: String
+        +paymentId: Long
+        +orderId: Long
         +amount: Integer
         +status: PaymentStatus
         +attemptedAt: DateTime
         +createdAt: DateTime
         +updatedAt: DateTime
+        +deletedAt: DateTime
         +processPayment()
     }
 
     class Delivery {
-        +deliveryId: String
-        +orderId: String
+        +deliveryId: Long
+        +orderId: Long
         +status: DeliveryStatus
         +trackingNumber: String
         +createdAt: DateTime
         +updatedAt: DateTime
+        +deletedAt: DateTime
         +updateStatus(status: DeliveryStatus)
     }
 
@@ -191,41 +223,59 @@ classDiagram
         DELIVERED
     }
 
+    class ReservationStatus {
+        <<enumeration>>
+        RESERVED
+        CONFIRMED
+        CANCELLED
+        EXPIRED
+    }
+
     %% Relationships
-    User "1" --> "*" Order : 소유
-    User "1" --> "*" Like : 소유
-    User "1" --> "1" Point : 소유
-    User "1" --> "*" PointHistory : 소유
+    User "1" --> "*" Order : places
+    User "1" --> "*" Like : creates
+    User "1" --> "1" Point : owns
+    User "1" --> "*" PointHistory : has
     
-    Product "*" --> "1" Brand : 참조
-    Product "1" --> "*" OrderLine : 참조됨
-    Product "1" --> "*" Like : 참조됨
-    Product "1" --> "0..1" LikeAggregation : 집계됨
-    Product "1" --> "*" ProductImage : 소유
+    Brand "1" --> "*" BrandCategory : has
+    Brand "1" --> "*" Product : offers
     
-    Order "1" --> "*" OrderLine : 소유
-    Order "1" --> "0..1" Payment : 소유
-    Order "1" --> "0..1" Delivery : 소유
-    Order "*" --> "1" User : 참조
+    BrandCategory "*" --> "1" Brand : belongsTo
+    BrandCategory "1" --> "*" Product : categorizes
     
-    Brand "1" --> "*" Product : 소유
+    Product "*" --> "1" Brand : belongsTo
+    Product "*" --> "1" BrandCategory : categorizedBy
+    Product "1" --> "*" OrderLine : includedIn
+    Product "1" --> "*" Like : receives
+    Product "1" --> "0..1" LikeAggregation : aggregatedBy
+    Product "1" --> "*" ProductImage : has
+    Product "1" --> "*" StockReservation : reserved
     
-    OrderLine "*" --> "1" Product : 참조
-    OrderLine "*" --> "1" Order : 참조
+    Order "1" --> "*" OrderLine : contains
+    Order "1" --> "0..1" Payment : paidBy
+    Order "1" --> "0..1" Delivery : shippedBy
+    Order "*" --> "1" User : placedBy
+    Order "1" --> "*" StockReservation : reserves
     
-    Like "*" --> "1" User : 참조
-    Like "*" --> "1" Product : 참조
+    OrderLine "*" --> "1" Product : references
+    OrderLine "*" --> "1" Order : belongsTo
     
-    Payment "*" --> "1" Order : 참조
+    Like "*" --> "1" User : createdBy
+    Like "*" --> "1" Product : targets
     
-    Delivery "*" --> "1" Order : 참조
+    Payment "*" --> "1" Order : pays
     
-    LikeAggregation "*" --> "1" Product : 참조
+    Delivery "*" --> "1" Order : delivers
     
-    ProductImage "*" --> "1" Product : 참조
+    LikeAggregation "1" --> "1" Product : aggregates
     
-    Point "*" --> "1" User : 참조
+    ProductImage "*" --> "1" Product : belongsTo
     
-    PointHistory "*" --> "1" User : 참조
-    PointHistory "*" --> "0..1" Order : 참조
+    Point "1" --> "1" User : belongsTo
+    
+    PointHistory "*" --> "1" User : belongsTo
+    PointHistory "*" --> "0..1" Order : relatedTo
+    
+    StockReservation "*" --> "1" Product : reserves
+    StockReservation "*" --> "1" Order : createdBy
 ```
