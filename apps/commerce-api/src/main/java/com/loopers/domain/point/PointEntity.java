@@ -1,49 +1,34 @@
 package com.loopers.domain.point;
 
 import com.loopers.domain.BaseEntity;
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
+import com.loopers.domain.point.vo.ChargePoint;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "point")
 public class PointEntity extends BaseEntity {
 	@Id
 	private String userId;
-
 	private Long point;
 
-	public PointEntity(
-		String userId,
-		Long point
-	) {
-		if (point == null || point < 0) {
-			throw new CoreException(
-				ErrorType.BAD_REQUEST,
-				"포인트는 0 이상이어야 합니다."
-			);
-		}
+	public PointEntity(String userId, Long point) {
 		this.userId = userId;
 		this.point = point;
 	}
 
-	public static PointEntity charge(String userId, Long point) {
-		if (point == null || point <= 0) {
-			throw new CoreException(
-				ErrorType.BAD_REQUEST,
-				"충전 금액은 0보다 커야 합니다."
-			);
-		}
-		return new PointEntity(
-			userId,
-			point
-		);
-	};
+	public void charge(ChargePoint chargeAmount) {
+		this.point += chargeAmount.value();
+	}
+
+	public static PointEntity createInitial(String userId) {
+		return new PointEntity(userId, 0L);
+	}
 }

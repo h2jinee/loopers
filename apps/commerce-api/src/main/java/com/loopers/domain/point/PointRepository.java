@@ -4,6 +4,6 @@ import java.util.Optional;
 
 public interface PointRepository {
 	PointEntity save(PointEntity pointEntity);
-	Optional<PointEntity> findByUserId(String userId);
+	Optional<PointEntity> findById(String id);
 	void clear();
 }

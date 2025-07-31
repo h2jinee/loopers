@@ -1,7 +1,7 @@
 package com.loopers.domain.point;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,9 +11,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.loopers.domain.point.vo.ChargePoint;
+import com.loopers.domain.user.UserCommand;
 import com.loopers.domain.user.UserEntity;
 import com.loopers.domain.user.UserRepository;
 import com.loopers.domain.user.UserService;
+import com.loopers.domain.user.vo.Birth;
+import com.loopers.domain.user.vo.Email;
+import com.loopers.domain.user.vo.UserId;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -34,14 +39,16 @@ public class PointServiceIntegrationTest {
 
 	@BeforeEach
 	void setUp() {
-		UserEntity user = new UserEntity(
-			"h2jinee",
+		UserCommand.Create command = new UserCommand.Create(
+			new UserId("h2jinee"),
 			"전희진",
 			UserEntity.Gender.F,
-			"1997-01-18",
-			"wjsgmlwls97@gmail.com"
+			new Birth("1997-01-18"),
+			new Email("wjsgmlwls97@gmail.com")
 		);
-		userService.save(user);
+		UserEntity user = userService.createUser(command);
+		// 포인트 초기화
+		pointService.initializeUserPoint(user.getUserId());
 	}
 
 	@AfterEach
@@ -82,7 +89,7 @@ public class PointServiceIntegrationTest {
 			Long point = pointService.getUserPoint(userId);
 
 			// assert
-			assertThat(point).isNull();
+			assertThat(point).isEqualTo(0L);
 		}
 	}
 
@@ -98,17 +105,19 @@ public class PointServiceIntegrationTest {
 		void fail_whenUserDoesNotExist() {
 			// arrange
 			String userId = "devin";
+			PointCommand.Charge command = new PointCommand.Charge(
+				userId,
+				new ChargePoint(1000L)
+			);
 
-			// act
+			// act & assert
 			CoreException exception = assertThrows(CoreException.class, () -> {
-				pointService.save(new PointEntity(
-					userId,
-				1000L
-				));
+				pointService.charge(command);
 			});
 
 			// assert
 			assertThat(exception.getErrorType()).isEqualTo(ErrorType.NOT_FOUND);
+			assertThat(exception.getMessage()).isEqualTo("존재하지 않는 사용자입니다.");
 		}
 	}
 }

@@ -7,48 +7,32 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.loopers.domain.user.UserEntity;
-import com.loopers.domain.user.UserService;
+import com.loopers.application.user.UserApplicationService;
 import com.loopers.interfaces.api.ApiResponse;
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/users")
 public class UserV1ApiController implements UserV1ApiSpec {
+    
+    private final UserApplicationService userApplicationService;
 
-	private final UserService userService;
-
-	@PostMapping
-	@Override
-	public ApiResponse<UserV1Dto.UserResponse> signUp(
-		@RequestBody UserV1Dto.SignUpRequest signUpRequest
-	) {
-		UserEntity user = new UserEntity(
-			signUpRequest.userId(),
-			signUpRequest.name(),
-			signUpRequest.gender() == UserV1Dto.SignUpRequest.GenderRequest.M
-				? UserEntity.Gender.M
-				: UserEntity.Gender.F,
-			signUpRequest.birth(),
-			signUpRequest.email()
-
-		);
-		return ApiResponse.success(UserV1Dto.UserResponse.from(userService.save(user)));
-	}
-
-	@GetMapping("{userId}")
-	@Override
-	public ApiResponse<UserV1Dto.UserResponse> getUserInfo(
-		@PathVariable String userId
-	) {
-		UserEntity user = userService.getUserInfo(userId);
-		if (user == null) {
-			throw new CoreException(ErrorType.NOT_FOUND, "존재하지 않는 사용자입니다.");
-		}
-		return ApiResponse.success(UserV1Dto.UserResponse.from(user));
-	}
+    @PostMapping
+    @Override
+    public ApiResponse<UserDto.V1.SignUp.Response> signUp(
+        @Valid @RequestBody UserDto.V1.SignUp.Request request
+    ) {
+        UserDto.V1.SignUp.Response response = userApplicationService.signUp(request);
+        return ApiResponse.success(response);
+    }
+    
+    @GetMapping("{userId}")
+    @Override
+    public ApiResponse<UserDto.V1.GetUser.Response> getUserInfo(@PathVariable String userId) {
+        UserDto.V1.GetUser.Response response = userApplicationService.getUserInfo(userId);
+        return ApiResponse.success(response);
+    }
 }

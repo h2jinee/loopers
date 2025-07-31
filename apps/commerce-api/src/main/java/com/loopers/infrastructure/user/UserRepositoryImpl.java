@@ -25,12 +25,17 @@ public class UserRepositoryImpl implements UserRepository {
 	}
 
 	@Override
-	public Optional<UserEntity> findByUserId(String userId) {
-		return Optional.ofNullable(store.get(userId));
+	public Optional<UserEntity> findById(String id) {
+		return Optional.ofNullable(store.get(id));
 	}
 
 	@Override
 	public void clear() {
 		store.clear();
+	}
+
+	@Override
+	public boolean existsByUserId(String userId) {
+		return store.containsKey(userId);
 	}
 }

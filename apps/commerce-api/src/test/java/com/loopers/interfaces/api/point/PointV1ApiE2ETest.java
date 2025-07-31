@@ -18,9 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import com.loopers.domain.point.PointRepository;
+import com.loopers.domain.user.UserEntity;
 import com.loopers.domain.user.UserRepository;
 import com.loopers.interfaces.api.ApiResponse;
-import com.loopers.interfaces.api.user.UserV1Dto;
+import com.loopers.interfaces.api.user.UserDto;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class PointV1ApiE2ETest {
@@ -36,10 +37,10 @@ public class PointV1ApiE2ETest {
 
 	@BeforeEach
 	void setUp() {
-		UserV1Dto.SignUpRequest signUpRequest = new UserV1Dto.SignUpRequest(
+		UserDto.V1.SignUp.Request signUpRequest = new UserDto.V1.SignUp.Request(
 			"h2jinee",
 			"전희진",
-			UserV1Dto.SignUpRequest.GenderRequest.F,
+			UserEntity.Gender.F,
 			"1997-01-18",
 			"wjsgmlwls97@gmail.com"
 		);
@@ -71,18 +72,18 @@ public class PointV1ApiE2ETest {
 			headers.add("X-USER-ID", "h2jinee");
 
 			// act
-			ParameterizedTypeReference<ApiResponse<PointV1Dto.PointResponse>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<PointV1Dto.PointResponse>> response =
+			ParameterizedTypeReference<ApiResponse<PointDto.V1.GetPoint.Response>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<PointDto.V1.GetPoint.Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, new HttpEntity<>(headers), responseType);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-			ApiResponse<PointV1Dto.PointResponse> body = response.getBody();
+			ApiResponse<PointDto.V1.GetPoint.Response> body = response.getBody();
 			assertThat(body).isNotNull();
 			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
 
-			PointV1Dto.PointResponse data = body.data();
+			PointDto.V1.GetPoint.Response data = body.data();
 			assertThat(data.point()).isEqualTo(0L);
 		}
 
@@ -93,17 +94,16 @@ public class PointV1ApiE2ETest {
 			HttpHeaders headers = new HttpHeaders();
 
 			// act
-			ParameterizedTypeReference<ApiResponse<PointV1Dto.PointResponse>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<PointV1Dto.PointResponse>> response =
+			ParameterizedTypeReference<ApiResponse<PointDto.V1.GetPoint.Response>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<PointDto.V1.GetPoint.Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, new HttpEntity<>(headers), responseType);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-			ApiResponse<PointV1Dto.PointResponse> body = response.getBody();
+			ApiResponse<PointDto.V1.GetPoint.Response> body = response.getBody();
 			assertThat(body).isNotNull();
 			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.FAIL);
-
 		}
 	}
 
@@ -121,45 +121,45 @@ public class PointV1ApiE2ETest {
 		@Test
 		void returnsPointBalance_whenUserChargesPoint() {
 			// arrange
-			PointV1Dto.PointRequest pointRequest = new PointV1Dto.PointRequest(
+			PointDto.V1.Charge.Request pointRequest = new PointDto.V1.Charge.Request(
 				"h2jinee",
 				1000L
 			);
 
 			// act
-			ParameterizedTypeReference<ApiResponse<PointV1Dto.PointResponse>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<PointV1Dto.PointResponse>> response =
+			ParameterizedTypeReference<ApiResponse<PointDto.V1.Charge.Response>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<PointDto.V1.Charge.Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.POST, new HttpEntity<>(pointRequest), responseType);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-			ApiResponse<PointV1Dto.PointResponse> body = response.getBody();
+			ApiResponse<PointDto.V1.Charge.Response> body = response.getBody();
 			assertThat(body).isNotNull();
 			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
 
-			PointV1Dto.PointResponse data = body.data();
-			assertThat(data.point()).isEqualTo(1000L);
+			PointDto.V1.Charge.Response data = body.data();
+			assertThat(data.totalPoint()).isEqualTo(1000L);
 		}
 
 		@DisplayName("존재하지 않는 유저로 요청할 경우, 404 Not Found 응답을 반환한다.")
 		@Test
 		void returnsBadRequest_whenUserDoesNotExist() {
 			// arrange
-			PointV1Dto.PointRequest pointRequest = new PointV1Dto.PointRequest(
+			PointDto.V1.Charge.Request pointRequest = new PointDto.V1.Charge.Request(
 				"alen",
 				1000L
 			);
 
 			// act
-			ParameterizedTypeReference<ApiResponse<PointV1Dto.PointResponse>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<PointV1Dto.PointResponse>> response =
+			ParameterizedTypeReference<ApiResponse<PointDto.V1.Charge.Response>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<PointDto.V1.Charge.Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.POST, new HttpEntity<>(pointRequest), responseType);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
-			ApiResponse<PointV1Dto.PointResponse> body = response.getBody();
+			ApiResponse<PointDto.V1.Charge.Response> body = response.getBody();
 			assertThat(body).isNotNull();
 			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.FAIL);
 		}

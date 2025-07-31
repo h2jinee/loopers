@@ -25,8 +25,8 @@ public class PointRepositoryImpl implements PointRepository {
 	}
 
 	@Override
-	public Optional<PointEntity> findByUserId(String userId) {
-		return Optional.ofNullable(store.get(userId));
+	public Optional<PointEntity> findById(String id) {
+		return Optional.ofNullable(store.get(id));
 	}
 
 	@Override

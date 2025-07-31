@@ -13,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
+import com.loopers.domain.user.vo.Birth;
+import com.loopers.domain.user.vo.Email;
+import com.loopers.domain.user.vo.UserId;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -42,23 +45,23 @@ public class UserServiceIntegrationTest {
 		@Test
 		void savesUser_whenSignUpDataIsValid() {
 			// arrange
-			UserEntity user = new UserEntity(
-				"h2jinee",
+			UserCommand.Create command = new UserCommand.Create(
+				new UserId("h2jinee"),
 				"전희진",
 				UserEntity.Gender.F,
-				"1997-01-18",
-				"wjsgmlwls97@gmail.com"
+				new Birth("1997-01-18"),
+				new Email("wjsgmlwls97@gmail.com")
 			);
 
 			// act
-			UserEntity savedUser = userService.save(user);
+			UserEntity savedUser = userService.createUser(command);
 
 			// assert
 			assertThat(savedUser).isNotNull();
-			assertThat(savedUser.getUserId()).isEqualTo(user.getUserId());
-			assertThat(savedUser.getName()).isEqualTo(user.getName());
-			assertThat(savedUser.getEmail()).isEqualTo(user.getEmail());
-			assertThat(savedUser.getBirth()).isEqualTo(user.getBirth());
+			assertThat(savedUser.getUserId()).isEqualTo("h2jinee");
+			assertThat(savedUser.getName()).isEqualTo("전희진");
+			assertThat(savedUser.getEmail()).isEqualTo("wjsgmlwls97@gmail.com");
+			assertThat(savedUser.getBirth()).isEqualTo("1997-01-18");
 
 			verify(userRepository, times(1)).save(any(UserEntity.class));
 		}
@@ -67,26 +70,26 @@ public class UserServiceIntegrationTest {
 		@Test
 		void fail_whenUserIdAlreadyExists() {
 			// arrange
-			UserEntity user = new UserEntity(
-				"h2jinee",
+			UserCommand.Create user = new UserCommand.Create(
+				new UserId("h2jinee"),
 				"전희진",
 				UserEntity.Gender.F,
-				"1997-01-18",
-				"wjsgmlwls97@gmail.com"
+				new Birth("1997-01-18"),
+				new Email("wjsgmlwls97@gmail.com")
 			);
 
-			UserEntity newUser = new UserEntity(
-				"h2jinee",
+			UserCommand.Create newUser = new UserCommand.Create(
+				new UserId("h2jinee"),
 				"김데빈",
 				UserEntity.Gender.M,
-				"2000-01-01",
-				"devin@loopers.com"
+				new Birth("2000-01-01"),
+				new Email("devin@loopers.com")
 			);
 
 			// act
-			userService.save(user);
+			userService.createUser(user);
 			CoreException exception = assertThrows(CoreException.class, () -> {
-				userService.save(newUser);
+				userService.createUser(newUser);
 			});
 
 			// assert
@@ -106,41 +109,46 @@ public class UserServiceIntegrationTest {
 		@Test
 		void returnsUserInfo_whenUserIdExists() {
 			// arrange
-			UserEntity user = new UserEntity(
-				"h2jinee",
+			UserCommand.Create command = new UserCommand.Create(
+				new UserId("h2jinee"),
 				"전희진",
 				UserEntity.Gender.F,
-				"1997-01-18",
-				"wjsgmlwls97@gmail.com"
+				new Birth("1997-01-18"),
+				new Email("wjsgmlwls97@gmail.com")
 			);
-			userService.save(user);
+			UserEntity user = userService.createUser(command);
 
 			// act
 			UserEntity foundUser = userService.getUserInfo("h2jinee");
 
 			// assert
 			assertThat(foundUser).isNotNull();
-			assertThat(foundUser).isEqualTo(user);
+			assertThat(foundUser.getUserId()).isEqualTo(user.getUserId());
+			assertThat(foundUser.getName()).isEqualTo(user.getName());
+			assertThat(foundUser.getEmail()).isEqualTo(user.getEmail());
 		}
 
 		@DisplayName("해당 ID의 회원이 존재하지 않을 경우, null이 반환된다.")
 		@Test
 		void returnsNull_whenUserIdDoesNotExist() {
 			// arrange
-			UserEntity user = new UserEntity(
-				"h2jinee",
+			UserCommand.Create command = new UserCommand.Create(
+				new UserId("h2jinee"),
 				"전희진",
 				UserEntity.Gender.F,
-				"1997-01-18",
-				"wjsgmlwls97@gmail.com"
+				new Birth("1997-01-18"),
+				new Email("wjsgmlwls97@gmail.com")
 			);
-			userService.save(user);
+			userService.createUser(command);
 
-			// act
-			UserEntity foundUser = userService.getUserInfo("devin");
+			// act & assert
+			CoreException exception = assertThrows(CoreException.class, () -> {
+				userService.getUserInfo("devin");
+			});
 
 			// assert
-			assertThat(foundUser).isNull();
+			assertThat(exception.getErrorType()).isEqualTo(ErrorType.NOT_FOUND);
+			assertThat(exception.getMessage()).isEqualTo("존재하지 않는 사용자입니다.");
 		}
 	}
 }

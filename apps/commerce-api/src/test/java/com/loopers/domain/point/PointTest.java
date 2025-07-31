@@ -1,12 +1,13 @@
 package com.loopers.domain.point;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.loopers.domain.point.vo.ChargePoint;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -25,12 +26,9 @@ public class PointTest {
 		0
 	})
 	void fail_whenPointIsNotPositive(Long point) {
-		// arrange
-		final String userId = "h2jinee";
-
-		// act
+		// act & assert
 		final CoreException exception = assertThrows(CoreException.class, () -> {
-			PointEntity.charge(userId, point);
+			new ChargePoint(point);
 		});
 
 		// assert

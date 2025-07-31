@@ -8,13 +8,14 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@NoArgsConstructor
 @Table(name = "member")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserEntity extends BaseEntity {
 
 	@Id
@@ -42,10 +43,6 @@ public class UserEntity extends BaseEntity {
 		String email
 
 	) {
-		UserValidator.validateUserId(userId);
-		UserValidator.validateBirth(birth);
-		UserValidator.validateEmail(email);
-
 		this.userId = userId;
 		this.name = name;
 		this.gender = gender;

@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import com.loopers.domain.point.PointRepository;
+import com.loopers.domain.user.UserEntity;
 import com.loopers.domain.user.UserRepository;
 import com.loopers.interfaces.api.ApiResponse;
 
@@ -36,10 +37,10 @@ public class UserV1ApiE2ETest {
 
 	@BeforeEach
 	void setUp() {
-		UserV1Dto.SignUpRequest signUpRequest = new UserV1Dto.SignUpRequest(
+		UserDto.V1.SignUp.Request signUpRequest = new UserDto.V1.SignUp.Request(
 			"h2jinee",
 			"전희진",
-			UserV1Dto.SignUpRequest.GenderRequest.F,
+			UserEntity.Gender.F,
 			"1997-01-18",
 			"wjsgmlwls97@gmail.com"
 		);
@@ -67,35 +68,35 @@ public class UserV1ApiE2ETest {
 		@Test
 		void returnsUserInfo_whenJoinIsSuccessful() {
 			// arrange
-			UserV1Dto.SignUpRequest signUpRequest = new UserV1Dto.SignUpRequest(
+			UserDto.V1.SignUp.Request signUpRequest = new UserDto.V1.SignUp.Request(
 				"devin",
 				"김데빈",
-				UserV1Dto.SignUpRequest.GenderRequest.M,
+				UserEntity.Gender.M,
 				"2000-01-01",
 				"devin@loopers.com"
 			);
 
 			// act
-			ParameterizedTypeReference<ApiResponse<UserV1Dto.UserResponse>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<UserV1Dto.UserResponse>> response =
+			ParameterizedTypeReference<ApiResponse<UserDto.V1.SignUp.Response>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<UserDto.V1.SignUp.Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.POST, new HttpEntity<>(signUpRequest), responseType);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-			ApiResponse<UserV1Dto.UserResponse> body = response.getBody();
+			ApiResponse<UserDto.V1.SignUp.Response> body = response.getBody();
 			assertThat(body).isNotNull();
 			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
 
-			UserV1Dto.UserResponse data = body.data();
+			UserDto.V1.SignUp.Response data = body.data();
 			assertThat(data).isNotNull();
 			assertThat(data.userId()).isEqualTo(signUpRequest.userId());
 			assertThat(data.name()).isEqualTo(signUpRequest.name());
-			assertThat(data.gender()).isEqualTo(UserV1Dto.UserResponse.GenderResponse.M);
+			assertThat(data.gender()).isEqualTo(signUpRequest.gender());
 			assertThat(data.birth()).isEqualTo(signUpRequest.birth());
 			assertThat(data.email()).isEqualTo(signUpRequest.email());
-
 		}
+
 		@DisplayName("회원 가입 시에 성별이 없을 경우, 400 Bad Request 응답을 반환한다.")
 		@Test
 		void returnsBadRequest_whenGenderIsMissing() {
@@ -108,19 +109,19 @@ public class UserV1ApiE2ETest {
 					"email": "wjsgmlwls97@gmail.com"
 				}
 				""";
-			
+
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_JSON);
 
 			// act
-			ParameterizedTypeReference<ApiResponse<UserV1Dto.UserResponse>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<UserV1Dto.UserResponse>> response =
+			ParameterizedTypeReference<ApiResponse<UserDto.V1.SignUp.Response>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<UserDto.V1.SignUp.Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.POST, new HttpEntity<>(requestBody, headers), responseType);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-			ApiResponse<UserV1Dto.UserResponse> body = response.getBody();
+			ApiResponse<UserDto.V1.SignUp.Response> body = response.getBody();
 			assertThat(body).isNotNull();
 			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.FAIL);
 		}
@@ -143,22 +144,22 @@ public class UserV1ApiE2ETest {
 			String userId = "h2jinee";
 
 			// act
-			ParameterizedTypeReference<ApiResponse<UserV1Dto.UserResponse>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<UserV1Dto.UserResponse>> response =
+			ParameterizedTypeReference<ApiResponse<UserDto.V1.GetUser.Response>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<UserDto.V1.GetUser.Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, null, responseType, userId);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-			ApiResponse<UserV1Dto.UserResponse> body = response.getBody();
+			ApiResponse<UserDto.V1.GetUser.Response> body = response.getBody();
 			assertThat(body).isNotNull();
 			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
 
-			UserV1Dto.UserResponse data = body.data();
+			UserDto.V1.GetUser.Response data = body.data();
 			assertThat(data).isNotNull();
 			assertThat(data.userId()).isEqualTo("h2jinee");
 			assertThat(data.name()).isEqualTo("전희진");
-			assertThat(data.gender()).isEqualTo(UserV1Dto.UserResponse.GenderResponse.F);
+			assertThat(data.gender()).isEqualTo(UserEntity.Gender.F);
 			assertThat(data.birth()).isEqualTo("1997-01-18");
 			assertThat(data.email()).isEqualTo("wjsgmlwls97@gmail.com");
 		}
@@ -170,14 +171,14 @@ public class UserV1ApiE2ETest {
 			String userId = "devin";
 
 			// act
-			ParameterizedTypeReference<ApiResponse<UserV1Dto.UserResponse>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<UserV1Dto.UserResponse>> response =
+			ParameterizedTypeReference<ApiResponse<UserDto.V1.GetUser.Response>> responseType = new ParameterizedTypeReference<>() {};
+			ResponseEntity<ApiResponse<UserDto.V1.GetUser.Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, null, responseType, userId);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
-			ApiResponse<UserV1Dto.UserResponse> body = response.getBody();
+			ApiResponse<UserDto.V1.GetUser.Response> body = response.getBody();
 			assertThat(body).isNotNull();
 			assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.FAIL);
 		}

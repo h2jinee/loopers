@@ -8,6 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.loopers.domain.user.vo.Birth;
+import com.loopers.domain.user.vo.Email;
+import com.loopers.domain.user.vo.UserId;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -28,25 +31,14 @@ public class UserTest {
 		""
 	})
 	void fail_whenIdFormatIsInvalid(String userId) {
-		// arrange
-		final String name = "전희진";
-		final String email = "wjsgmlwls97@gmail.com";
-		final String birth = "1997-01-18";
-		final UserEntity.Gender gender = UserEntity.Gender.F;
-
-		// act
+		// act & assert
 		final CoreException exception = assertThrows(CoreException.class, () -> {
-			new UserEntity(
-				userId,
-				name,
-				gender,
-				birth,
-				email
-			);
+			new UserId(userId);
 		});
 
 		// assert
 		assertThat(exception.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST);
+		assertThat(exception.getMessage()).isEqualTo("ID는 영문 및 숫자 10자 이내로 입력해야 합니다.");
 	}
 
 	@DisplayName("이메일이 xx@yy.zz 형식에 맞지 않으면, User 객체 생성에 실패한다.")
@@ -58,25 +50,14 @@ public class UserTest {
 		"wjsgmlwls97@gmail.."
 	})
 	void fail_whenEmailFormatIsInvalid(String email) {
-		// arrange
-		final String userId = "h2jinee";
-		final String name = "전희진";
-		final String birth = "1997-01-18";
-		final UserEntity.Gender gender = UserEntity.Gender.F;
-
-		// act
+		// act & assert
 		final CoreException exception = assertThrows(CoreException.class, () -> {
-			new UserEntity(
-				userId,
-				name,
-				gender,
-				birth,
-				email
-			);
+			new Email(email);
 		});
 
 		// assert
 		assertThat(exception.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST);
+		assertThat(exception.getMessage()).isEqualTo("이메일은 xx@yy.zz 형식이어야 합니다.");
 	}
 
 	@DisplayName("생년월일이 yyyy-MM-dd 형식에 맞지 않으면, User 객체 생성에 실패한다.")
@@ -90,24 +71,13 @@ public class UserTest {
 		""
 	})
 	void fail_whenBirthDateFormatIsInvalid(String birth) {
-		// arrange
-		final String userId = "h2jinee";
-		final String name = "전희진";
-		final String email = "wjsgmlwls97@gmail.com";
-		final UserEntity.Gender gender = UserEntity.Gender.F;
-
-		// act
+		// act & assert
 		final CoreException exception = assertThrows(CoreException.class, () -> {
-			new UserEntity(
-				userId,
-				name,
-				gender,
-				birth,
-				email
-			);
+			new Birth(birth);
 		});
 
 		// assert
 		assertThat(exception.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST);
+		assertThat(exception.getMessage()).isEqualTo("생년월일은 yyyy-MM-dd 형식이어야 합니다.");
 	}
 }
