@@ -39,7 +39,6 @@ erDiagram
         bigint category_id FK
         varchar code UK
         varchar name_ko
-        varchar name_en
         int price
         text description
         int stock
@@ -51,7 +50,7 @@ erDiagram
         datetime deleted_at
     }
 
-    STOCK_RESERVATIONS {
+    PRODUCT_STOCK_RESERVATIONS {
         bigint reservation_id PK
         bigint product_id FK
         bigint order_id FK
@@ -69,6 +68,16 @@ erDiagram
         varchar image_url
         varchar image_type
         int display_order
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+
+    PRODUCT_COUNTS {
+        bigint product_id PK FK
+        int like_count
+        int order_count
+        datetime last_updated_at
         datetime created_at
         datetime updated_at
         datetime deleted_at
@@ -109,18 +118,9 @@ erDiagram
         datetime deleted_at
     }
 
-    LIKE_AGGREGATIONS {
-        bigint product_id PK
-        int like_count
-        datetime last_batch_time
-        datetime created_at
-        datetime updated_at
-        datetime deleted_at
-    }
-
     POINTS {
         bigint point_id PK
-        bigint user_id FK
+        bigint user_id FK UK
         int balance
         datetime created_at
         datetime updated_at
@@ -130,8 +130,8 @@ erDiagram
     POINT_HISTORIES {
         bigint history_id PK
         bigint user_id FK
-        int amount "양수:충전, 음수:사용"
-        enum type "CHARGE, USE"
+        int amount
+        varchar type "CHARGE, USE, REFUND"
         varchar description
         bigint order_id FK "nullable"
         datetime created_at
@@ -141,6 +141,8 @@ erDiagram
     PAYMENTS {
         bigint payment_id PK
         bigint order_id FK
+        bigint user_id FK
+        bigint point_history_id FK
         int amount
         varchar status
         datetime attempted_at
@@ -174,15 +176,15 @@ erDiagram
     PRODUCTS }o--|| BRAND_CATEGORIES : categorized_by
     PRODUCTS ||--o{ ORDER_LINES : included_in
     PRODUCTS ||--o{ LIKES : received
-    PRODUCTS ||--o| LIKE_AGGREGATIONS : aggregated
+    PRODUCTS ||--|| PRODUCT_COUNTS : tracked_by
     PRODUCTS ||--o{ PRODUCT_IMAGES : has
-    PRODUCTS ||--o{ STOCK_RESERVATIONS : reserved
+    PRODUCTS ||--o{ PRODUCT_STOCK_RESERVATIONS : reserved
     
     ORDERS ||--o{ ORDER_LINES : contains
     ORDERS ||--o| PAYMENTS : paid_by
     ORDERS ||--o| DELIVERIES : shipped_by
     ORDERS }o--|| USERS : placed_by
-    ORDERS ||--o{ STOCK_RESERVATIONS : reserves
+    ORDERS ||--o{ PRODUCT_STOCK_RESERVATIONS : reserves
     
     ORDER_LINES }o--|| ORDERS : belongs_to
     ORDER_LINES }o--|| PRODUCTS : references
@@ -190,7 +192,7 @@ erDiagram
     LIKES }o--|| USERS : by
     LIKES }o--|| PRODUCTS : for
     
-    LIKE_AGGREGATIONS ||--|| PRODUCTS : aggregates
+    PRODUCT_COUNTS ||--|| PRODUCTS : aggregates
     
     POINTS ||--|| USERS : belongs_to
     
@@ -198,11 +200,13 @@ erDiagram
     POINT_HISTORIES }o--o| ORDERS : related_to
     
     PAYMENTS ||--|| ORDERS : for
+    PAYMENTS }o--|| USERS : paid_by
+    PAYMENTS }o--|| POINT_HISTORIES : creates
     
     DELIVERIES ||--|| ORDERS : for
     
     PRODUCT_IMAGES }o--|| PRODUCTS : belongs_to
     
-    STOCK_RESERVATIONS }o--|| PRODUCTS : for
-    STOCK_RESERVATIONS }o--|| ORDERS : by
+    PRODUCT_STOCK_RESERVATIONS }o--|| PRODUCTS : for
+    PRODUCT_STOCK_RESERVATIONS }o--|| ORDERS : by
 ```

@@ -4,74 +4,50 @@
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant BS as BrandService
-    participant BR as BrandRepository
+    participant AS as BrandApplicationService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 브랜드 목록 요청
-    C->>BS: 브랜드 목록 조회
-    BS->>BR: 브랜드 목록 조회
-    BR->>DB: 브랜드 데이터 조회
-    DB-->>BR: 브랜드 목록 (이미지 URL 포함)
-    BR-->>BS: 브랜드 엔티티 목록
+    U->>C: GET /api/v1/brands
+    C->>AS: 브랜드 목록 조회
     
-    BS->>BS: 페이지네이션 처리
-    BS->>BS: 응답 데이터 구성<br/>(브랜드 이름, 이미지 URL)
+    AS->>Repo: 브랜드 목록 조회
+    Repo->>DB: 브랜드 데이터 조회
+    DB-->>Repo: 브랜드 목록
+    Repo-->>AS: List<Brand>
     
-    BS-->>C: 브랜드 목록 응답
-    C-->>U: 브랜드 목록 표시
+    Note over AS: 브랜드 이름, 이미지 URL 구성
+    
+    AS-->>C: 브랜드 목록
+    C-->>U: 브랜드 목록 응답
 ```
 
-## 2. 브랜드 상세 조회
+## 2. 브랜드 상세 조회 (상품 목록 포함)
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant BS as BrandService
-    participant PS as ProductService
-    participant BR as BrandRepository
-    participant PR as ProductRepository
-    participant LR as LikeRepository
+    participant AS as BrandApplicationService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 브랜드 상세 요청
-    C->>BS: 브랜드 상세 조회
+    U->>C: GET /api/v1/brands/{brandId}
+    C->>AS: 브랜드 상세 조회
     
-    BS->>BR: 브랜드 정보 조회
-    BR->>DB: 브랜드 상세 데이터 조회
-    DB-->>BR: 브랜드 정보 (이미지 URL 포함)
+    AS->>Repo: 브랜드 및 해당 상품 조회
+    Repo->>DB: 브랜드, 상품, 좋아요 데이터 조회
+    DB-->>Repo: 조회 결과
     
     alt 브랜드 없음
-        BR-->>BS: null
-        BS-->>C: 브랜드 없음
-        C-->>U: 존재하지 않는 브랜드
+        Repo-->>AS: 브랜드 없음
+        AS-->>C: 404 Not Found
+        C-->>U: 브랜드를 찾을 수 없습니다
     else 브랜드 존재
-        BR-->>BS: 브랜드 엔티티
-        
-        BS->>BS: 브랜드 정보 구성<br/>(커버 이미지 URL, 프로필 이미지 URL,<br/>한국/영어 이름, 카테고리)
-        
-        BS->>PS: 브랜드 상품 목록 요청<br/>(필터, 정렬 조건 포함)
-        PS->>PS: 필터 조건 파싱<br/>(카테고리, minPrice, maxPrice, 출시년도)<br/>AND 조건으로 조합, 빈 값은 제외
-        PS->>PS: 정렬 조건 확인<br/>(가격/좋아요/최신순)
-        
-        PS->>PR: 브랜드별 상품 조회
-        PR->>DB: 상품 데이터 조회
-        DB-->>PR: 상품 목록 (이미지 URL 포함)
-        PR-->>PS: 상품 엔티티 목록
-        
-        PS->>LR: 상품별 좋아요 수 요청
-        LR->>DB: 좋아요 집계 데이터 조회
-        DB-->>LR: 상품별 좋아요 수
-        LR-->>PS: 좋아요 집계 데이터
-        
-        PS->>PS: 페이지네이션 처리
-        PS->>PS: 상품 목록 구성
-        PS-->>BS: 상품 목록
-        
-        BS->>BS: 응답 데이터 구성<br/>(브랜드 정보 + 상품 목록)
-        BS-->>C: 브랜드 상세 응답
-        C-->>U: 브랜드 상세 표시
+        Repo-->>AS: 브랜드 및 상품 목록
+        Note over AS: 브랜드 정보와 상품 목록 조합
+        AS-->>C: 브랜드 상세 (상품 포함)
+        C-->>U: 브랜드 상세 응답
     end
 ```
 
@@ -81,82 +57,53 @@ sequenceDiagram
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant PS as ProductService
-    participant PR as ProductRepository
-    participant LR as LikeRepository
+    participant AS as ProductApplicationService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 상품 목록 요청<br/>(필터, 정렬 조건 포함)
-    C->>PS: 상품 목록 조회 요청
+    U->>C: GET /api/v1/products
+    Note over C: 쿼리 파라미터: brandId, sort, page, size
+    C->>AS: 상품 목록 조회
     
-    PS->>PS: 필터 조건 파싱<br/>(카테고리, 브랜드, minPrice, maxPrice, 출시년도)<br/>AND 조건으로 조합, 빈 값은 제외
-    PS->>PS: 정렬 조건 확인<br/>(가격/좋아요/최신순)
+    Note over AS: 필터/정렬 조건 처리
     
-    PS->>PR: 필터/정렬 조건으로 조회
-    PR->>DB: 상품 데이터 조회
-    DB-->>PR: 상품 목록 (품절 포함, 이미지 URL 포함)
-    PR-->>PS: 상품 엔티티 목록
+    AS->>Repo: 상품 및 좋아요 수 조회
+    Repo->>DB: 조건별 상품 조회
+    DB-->>Repo: 상품 데이터
+    Repo-->>AS: 상품 목록 및 좋아요 정보
     
-    PS->>LR: 조회된 상품들의 좋아요 수 요청
-    LR->>DB: 좋아요 집계 테이블 조회
-    DB-->>LR: 상품별 좋아요 수
-    LR-->>PS: 좋아요 집계 데이터
+    Note over AS: 페이지네이션 처리 (기본 20개)
     
-    PS->>PS: 페이지네이션 처리<br/>(기본 20개, 최대 100개)
-    PS->>PS: 품절 상태 표시 처리
-    PS->>PS: 상품별 좋아요 수 매핑
-    PS->>PS: 응답 데이터 구성
-    
-    PS-->>C: 상품 목록 응답
-    C-->>U: 상품 목록 표시
+    AS-->>C: 상품 목록
+    C-->>U: 상품 목록 응답
 ```
 
-## 4. 상품 상세 정보 조회
+## 4. 상품 상세 조회
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant PS as ProductService
-    participant BS as BrandService
-    participant LS as LikeService
-    participant PR as ProductRepository
-    participant BR as BrandRepository
-    participant LR as LikeRepository
+    participant AS as ProductApplicationService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 상품 상세 요청
-    C->>PS: 상품 정보 조회
+    U->>C: GET /api/v1/products/{productId}
+    C->>AS: 상품 상세 조회
     
-    PS->>PR: 상품 조회
-    PR->>DB: 상품 데이터 조회
-    DB-->>PR: 상품 정보 (이미지 URL 포함)
+    AS->>Repo: 상품, 브랜드, 좋아요 조회
+    Repo->>DB: 관련 데이터 조회
+    DB-->>Repo: 조회 결과
     
     alt 상품 없음
-        PR-->>PS: null
-        PS-->>C: 상품 없음
-        C-->>U: 존재하지 않는 상품
+        Repo-->>AS: 상품 없음
+        AS-->>C: 404 Not Found
+        C-->>U: 상품을 찾을 수 없습니다
     else 상품 존재
-        PR-->>PS: 상품 엔티티
-        
-        PS->>BS: 브랜드 정보 요청
-        BS->>BR: 브랜드 조회
-        BR->>DB: 브랜드 데이터 조회
-        DB-->>BR: 브랜드 정보
-        BR-->>BS: 브랜드 엔티티
-        BS-->>PS: 브랜드 상세
-        
-        PS->>LS: 좋아요 수 요청
-        LS->>LR: 좋아요 집계 조회
-        LR->>DB: 좋아요 집계 데이터 조회
-        DB-->>LR: 총 좋아요 수
-        LR-->>LS: 좋아요 수
-        LS-->>PS: 좋아요 수
-        
-        PS->>PS: 응답 데이터 구성<br/>(브랜드명, 금액, 썸네일 URL,<br/>상품 설명, 배송비, 좋아요 수,<br/>상세 이미지 URL)
-        
-        PS-->>C: 상품 상세 응답
-        C-->>U: 상품 상세 표시
+        Repo-->>AS: 상품 상세 정보
+        Note over AS: 상품, 브랜드, 좋아요 수 조합
+        AS-->>C: 상품 상세
+        C-->>U: 상품 상세 응답
     end
 ```
 
@@ -166,368 +113,204 @@ sequenceDiagram
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant LS as LikeService
-    participant LR as LikeRepository
+    participant AS as LikeApplicationService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 좋아요 추가 또는 삭제 요청
-    C->>C: 사용자 인증 확인
+    U->>C: POST/DELETE /api/v1/like/products/{productId}
+    Note over C: X-USER-ID 헤더 확인
     
-    alt 미인증 사용자
-        C-->>U: 인증 필요 응답
-    else 인증된 사용자
-        C->>LS: 좋아요 처리
+    alt POST (좋아요 등록)
+        C->>AS: 좋아요 등록
+        AS->>Repo: 기존 좋아요 확인
         
-        alt 좋아요 추가 요청
-            LS->>LR: 기존 좋아요 확인
-            LR->>DB: 사용자-상품 좋아요 조회
-            DB-->>LR: 조회 결과
-            
-            alt 좋아요 없음
-                LR-->>LS: null
-                LS->>LR: 좋아요 생성
-                LR->>DB: 좋아요 저장
-                DB-->>LR: 저장 완료
-                LR-->>LS: 좋아요 추가됨
-            else 좋아요 이미 존재
-                LR-->>LS: 기존 좋아요
-                LS->>LS: 이미 존재 (멱등성)
-            end
-            
-            LS-->>C: 성공 (201 또는 200)
-            C-->>U: 좋아요 추가 완료
-            
-        else 좋아요 삭제 요청
-            LS->>LR: 기존 좋아요 확인
-            LR->>DB: 사용자-상품 좋아요 조회
-            DB-->>LR: 조회 결과
-            
-            alt 좋아요 존재
-                LR-->>LS: 좋아요 정보
-                LS->>LR: 좋아요 삭제
-                LR->>DB: 좋아요 제거
-                DB-->>LR: 삭제 완료
-                LR-->>LS: 좋아요 삭제됨
-            else 좋아요 없음
-                LR-->>LS: null
-                LS->>LS: 이미 없음 (멱등성)
-            end
-            
-            LS-->>C: 성공 (200)
-            C-->>U: 좋아요 삭제 완료
+        alt 이미 좋아요 존재
+            AS-->>C: 200 OK (멱등성)
+        else 좋아요 없음
+            AS->>Repo: 좋아요 추가
+            AS-->>C: 201 Created
         end
+        
+    else DELETE (좋아요 취소)
+        C->>AS: 좋아요 취소
+        AS->>Repo: 좋아요 삭제
+        AS-->>C: 200 OK (멱등성)
     end
     
-    Note right of DB: 배치 시스템이 매일 새벽 2시에<br/>likes 테이블을 집계하여<br/>테이블 업데이트
+    C-->>U: 처리 완료
 ```
 
-## 6. 내가 좋아요한 상품 목록 조회
+## 6. 내가 좋아요한 상품 목록
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant LS as LikeService
-    participant PS as ProductService
-    participant LR as LikeRepository
-    participant PR as ProductRepository
+    participant AS as LikeApplicationService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 내 좋아요 목록 요청<br/>(필터, 정렬 조건 포함)
-    C->>C: 사용자 인증 확인
+    U->>C: GET /api/v1/like/products
+    Note over C: X-USER-ID 헤더 확인
+    C->>AS: 좋아요 상품 목록 조회
     
-    alt 미인증
-        C-->>U: 인증 필요
-    else 인증됨
-        C->>LS: 사용자 좋아요 목록 조회
-        
-        LS->>LS: 필터 조건 파싱<br/>(카테고리, 브랜드, minPrice, maxPrice, 출시년도)<br/>AND 조건으로 조합, 빈 값은 제외
-        LS->>LS: 정렬 조건 확인<br/>(가격/좋아요/최신순)
-        
-        LS->>LR: 사용자별 좋아요 조회
-        LR->>DB: 좋아요 목록 조회
-        DB-->>LR: 좋아요한 상품 ID 목록
-        LR-->>LS: 좋아요 엔티티 목록
-        
-        LS->>PS: 상품 정보 요청 (필터 조건 포함)
-        PS->>PR: 상품 목록 조회 (필터/정렬 적용)
-        PR->>DB: 상품 데이터 조회
-        DB-->>PR: 상품 정보 목록 (이미지 URL 포함)
-        PR-->>PS: 상품 엔티티 목록
-        
-        PS->>LR: 좋아요 수 조회
-        LR->>DB: 좋아요 집계 데이터 조회
-        DB-->>LR: 상품별 좋아요 수
-        LR-->>PS: 좋아요 집계 데이터
-        
-        PS-->>LS: 상품 상세 목록
-        
-        LS->>LS: 페이지네이션 처리
-        LS->>LS: 응답 데이터 구성
-        
-        LS-->>C: 좋아요 상품 목록
-        C-->>U: 좋아요 목록 표시
-    end
+    AS->>Repo: 사용자의 좋아요 및 상품 조회
+    Repo->>DB: 좋아요 상품 데이터 조회
+    DB-->>Repo: 상품 목록
+    Repo-->>AS: 좋아요한 상품 목록
+    
+    Note over AS: 페이지네이션 처리
+    
+    AS-->>C: 좋아요 상품 목록
+    C-->>U: 좋아요 목록 응답
 ```
 
-## 7. 주문 생성
+## 7. 주문 생성 단계 (주문 API 내부 - 1단계)
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant OS as OrderService
-    participant PS as ProductService
-    participant US as UserService
-    participant OR as OrderRepository
-    participant OLR as OrderLineRepository
-    participant PR as ProductRepository
-    participant UR as UserRepository
+    participant AS as OrderApplicationService
+    participant DS as OrderDomainService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 상품 주문 요청
-    C->>C: 사용자 인증 확인
+    U->>C: POST /api/v1/orders
+    Note over C: X-USER-ID 헤더 확인
+    C->>AS: 주문 요청
     
-    alt 미인증
-        C-->>U: 로그인 필요
-    else 인증됨
-        C->>OS: 주문 생성 요청
+    Note over AS: === 주문 생성 단계 시작 ===
+    
+    AS->>Repo: 사용자, 상품 조회
+    Repo->>DB: 필요 데이터 조회
+    DB-->>Repo: 사용자 및 상품 정보
+    Repo-->>AS: 도메인 객체
+    
+    AS->>DS: 주문 생성 처리
+    Note over DS: 재고 확인<br/>재고 임시 차감<br/>주문 엔티티 생성
+    
+    alt 재고 부족
+        DS-->>AS: 재고 부족 예외
+        AS-->>C: 409 Conflict
+        C-->>U: 재고가 부족합니다
+    else 재고 있음
+        DS->>Repo: 주문 임시 저장
+        Repo->>DB: 주문 저장 (결제 대기)
+        DB-->>Repo: 저장 완료
+        Repo-->>DS: 주문 객체
+        DS-->>AS: 주문 생성 완료
         
-        OS->>PS: 상품 정보 및 재고 확인
-        PS->>PR: 상품 조회
-        PR->>DB: 상품 데이터 조회
-        DB-->>PR: 상품 정보 (재고 포함)
-        PR-->>PS: 상품 엔티티
-        
-        PS->>PS: 재고 확인
-        
-        alt 재고 없음 (품절)
-            PS-->>OS: 품절 상태
-            OS-->>C: 품절
-            C-->>U: 품절된 상품입니다
-        else 재고 있음
-            OS->>US: 사용자 정보 조회
-            US->>UR: 사용자 조회
-            UR->>DB: 사용자 데이터 조회
-            DB-->>UR: 사용자 정보
-            UR-->>US: 사용자 엔티티
-            US-->>OS: 사용자 정보
-            
-            OS->>DB: 트랜잭션 시작
-            
-            OS->>PS: 재고 임시 차감
-            PS->>PR: 재고 업데이트 (임시)
-            PR->>DB: 재고 차감
-            
-            OS->>OS: 주문 총액 계산<br/>(상품금액 + 배송비)
-            
-            OS->>OR: 주문 생성 (결제대기 상태)
-            OR->>DB: 주문 저장
-            DB-->>OR: 주문 ID
-            
-            OS->>OLR: 주문 상세 생성
-            OLR->>DB: 주문 상세 저장<br/>(주문 ID, 상품 ID, 수량=1, 가격)
-            
-            OS->>DB: 트랜잭션 커밋
-            
-            OS-->>C: 주문 생성 완료 (주문 ID)
-            C-->>U: 주문 생성 성공, 결제 진행 필요
-        end
+        Note over AS: === 주문 생성 단계 완료 ===<br/>결제 처리 단계로 진행
     end
 ```
 
-## 8. 결제 처리
+## 8. 결제 처리 단계 (주문 API 내부 - 2단계)
+
+```mermaid
+sequenceDiagram
+    participant AS as OrderApplicationService
+    participant PAS as PaymentApplicationService
+    participant PDS as PaymentDomainService
+    participant DS as OrderDomainService
+    participant Repo as Repository
+    participant DB as Database
+    participant C as Controller
+    participant U as User
+    
+    AS->>PAS: 결제 처리 요청
+    PAS->>Repo: 사용자 포인트 조회
+    Repo->>DB: 포인트 데이터 조회
+    DB-->>Repo: 포인트 정보
+    Repo-->>PAS: 포인트 도메인 객체
+    
+    PAS->>PDS: 결제 가능 여부 확인
+    Note over PDS: 포인트 잔액 검증<br/>결제 금액 계산
+    
+    alt 포인트 부족
+        PDS-->>PAS: 포인트 부족
+        PAS-->>AS: 결제 실패
+        AS->>DS: 주문 취소 처리
+        Note over DS: 재고 롤백<br/>주문 상태 변경
+        AS->>Repo: 변경사항 저장
+        AS-->>C: 409 Conflict
+        C-->>U: 포인트가 부족합니다
+    else 포인트 충분
+        PDS-->>PAS: 결제 가능
+        PAS->>PDS: 포인트 차감 처리
+        Note over PDS: 포인트 차감<br/>포인트 이력 생성
+        PDS-->>PAS: 차감된 포인트 객체
+        
+        PAS->>Repo: 포인트 및 이력 저장
+        Repo->>DB: 포인트 업데이트
+        PAS-->>AS: 결제 완료
+        
+        AS->>DS: 주문 확정 처리
+        Note over DS: 주문 상태 변경 (결제완료)<br/>재고 확정 차감
+        
+        AS->>Repo: 주문 상태 업데이트
+        AS->>Repo: 트랜잭션 커밋
+        Repo->>DB: 모든 변경사항 확정
+        DB-->>Repo: 커밋 완료
+        
+        Note over AS: === 결제 처리 단계 완료 ===
+        
+        AS-->>C: 주문 및 결제 완료
+        C-->>U: 201 Created
+    end
+```
+
+## 9. 주문 목록 조회
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant PmtS as PaymentService
-    participant OS as OrderService
-    participant PS as ProductService
-    participant PtS as PointService
-    participant OR as OrderRepository
-    participant PR as ProductRepository
-    participant UR as UserRepository
+    participant AS as OrderApplicationService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 결제 요청 (주문 ID)
-    C->>C: 사용자 인증 확인
+    U->>C: GET /api/v1/orders
+    Note over C: X-USER-ID 헤더 확인
+    C->>AS: 주문 목록 조회
     
-    alt 미인증
-        C-->>U: 로그인 필요
-    else 인증됨
-        C->>PmtS: 결제 처리 요청
-        
-        PmtS->>OS: 주문 정보 조회
-        OS->>OR: 주문 조회
-        OR->>DB: 주문 데이터 조회
-        DB-->>OR: 주문 정보
-        
-        alt 주문 없음 또는 다른 사용자 주문
-            OR-->>OS: null 또는 권한 없음
-            OS-->>PmtS: 주문 조회 실패
-            PmtS-->>C: 주문 조회 불가
-            C-->>U: 주문을 찾을 수 없습니다
-        else 본인 주문
-            OR-->>OS: 주문 엔티티
-            
-            alt 주문 상태 != 결제대기
-                OS-->>PmtS: 결제 불가 상태
-                PmtS-->>C: 결제 진행 불가
-                C-->>U: 이미 처리된 주문입니다
-            else 결제 가능
-                PmtS->>PtS: 포인트 잔액 확인
-                PtS->>UR: 사용자 포인트 조회
-                UR->>DB: 포인트 데이터 조회
-                DB-->>UR: 포인트 잔액
-                UR-->>PtS: 포인트 정보
-                PtS-->>PmtS: 포인트 잔액
-                
-                alt 포인트 부족
-                    PmtS-->>C: 포인트 부족
-                    C-->>U: 포인트가 부족합니다
-                else 포인트 결제 가능
-                    PmtS->>DB: 트랜잭션 시작
-                    
-                    PmtS->>PmtS: 주문 시간 재확인
-                    alt 주문 후 10분 초과
-                        PmtS->>DB: 트랜잭션 롤백
-                        
-                        PmtS->>PS: 임시 차감 재고 복원
-                        PS->>PR: 재고 복원
-                        PR->>DB: 재고 증가
-                        
-                        PmtS->>OS: 주문 상태 업데이트
-                        OS->>OR: 주문 상태 변경
-                        OR->>DB: 상태 = '주문취소'
-                        
-                        PmtS-->>C: 결제 시간 초과
-                        C-->>U: 결제 시간이 초과되었습니다
-                    else 시간 내
-                        PmtS->>PtS: 포인트 차감
-                        PtS->>UR: 포인트 업데이트
-                        UR->>DB: 포인트 차감
-                        
-                        PmtS->>OS: 주문 상태 업데이트
-                        OS->>OR: 주문 상태 변경
-                        OR->>DB: 상태 = '결제완료'
-                        
-                        PmtS->>PS: 재고 확정 차감
-                        PS->>PR: 재고 확정 처리
-                        PR->>DB: 재고 상태 확정
-                        
-                        PS->>PS: 재고 확인
-                        alt 재고가 0
-                            PS->>PR: 상품 상태 업데이트
-                            PR->>DB: 상품 상태 = '품절'
-                        end
-                        
-                        PmtS->>DB: 트랜잭션 커밋
-                        
-                        PmtS-->>C: 결제 완료
-                        C-->>U: 결제 성공
-                    end
-                end
-            end
-        end
-    end
+    AS->>Repo: 사용자의 주문 및 상품 조회
+    Repo->>DB: 주문 데이터 조회
+    DB-->>Repo: 주문 목록
+    Repo-->>AS: 주문 및 관련 정보
+    
+    Note over AS: 주문별 상품 정보 조합<br/>페이지네이션 처리
+    
+    AS-->>C: 주문 목록
+    C-->>U: 주문 목록 응답
 ```
 
-## 9. 내 주문 목록 조회
+## 10. 주문 상세 조회
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant C as Controller
-    participant OS as OrderService
-    participant PS as ProductService
-    participant OR as OrderRepository
-    participant PR as ProductRepository
+    participant AS as OrderApplicationService
+    participant Repo as Repository
     participant DB as Database
 
-    U->>C: 내 주문 목록 요청
-    C->>C: 사용자 인증 확인
+    U->>C: GET /api/v1/orders/{orderId}
+    Note over C: X-USER-ID 헤더 확인
+    C->>AS: 주문 상세 조회
     
-    alt 미인증
-        C-->>U: 로그인 필요
-    else 인증됨
-        C->>OS: 사용자 주문 목록 조회
-        
-        OS->>OR: 사용자별 주문 조회
-        OR->>DB: 주문 목록 쿼리
-        DB-->>OR: 주문 목록
-        OR-->>OS: 주문 엔티티 목록
-        
-        OS->>PS: 주문별 상품 정보 요청
-        PS->>PR: 상품 목록 조회
-        PR->>DB: 상품 데이터 조회
-        DB-->>PR: 상품 정보 (이미지 URL 포함)
-        PR-->>PS: 상품 엔티티 목록
-        
-        PS-->>OS: 상품 상세 (이미지 URL 포함)
-        
-        OS->>OS: 주문 상태별 분류
-        OS->>OS: 페이지네이션 처리
-        OS->>OS: 응답 데이터 구성
-        
-        OS-->>C: 주문 목록
-        C-->>U: 주문 목록 표시
-    end
-```
-
-## 10. 단일 주문 상세 조회
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant C as Controller
-    participant OS as OrderService
-    participant PS as ProductService
-    participant DS as DeliveryService
-    participant OR as OrderRepository
-    participant PR as ProductRepository
-    participant DR as DeliveryRepository
-    participant DB as Database
-
-    U->>C: 주문 상세 요청
-    C->>C: 사용자 인증 확인
+    AS->>Repo: 주문 및 상품 정보 조회
+    Repo->>DB: 주문 상세 데이터 조회
+    DB-->>Repo: 조회 결과
     
-    alt 미인증
-        C-->>U: 로그인 필요
-    else 인증됨
-        C->>OS: 주문 상세 조회
-        
-        OS->>OR: 주문 조회
-        OR->>DB: 주문 데이터 조회
-        DB-->>OR: 주문 정보
-        
-        alt 주문 없음 또는 다른 사용자 주문
-            OR-->>OS: null 또는 권한 없음
-            OS-->>C: 주문 조회 불가
-            C-->>U: 주문을 찾을 수 없습니다
-        else 주문 있음
-            OR-->>OS: 주문 엔티티
-            
-            OS->>PS: 상품 정보 요청
-            PS->>PR: 상품 조회
-            PR->>DB: 상품 데이터 조회
-            DB-->>PR: 상품 상세 (이미지 URL 포함)
-            PR-->>PS: 상품 엔티티
-            
-            PS-->>OS: 상품 정보 (이미지 URL 포함)
-            
-            OS->>DS: 배송 정보 요청
-            DS->>DR: 배송 조회
-            DR->>DB: 배송 데이터 조회
-            DB-->>DR: 배송 상태
-            DR-->>DS: 배송 엔티티
-            DS-->>OS: 배송 정보
-            
-            OS->>OS: 응답 데이터 구성<br/>(주문 정보, 상품 정보,<br/>결제 정보, 배송 상태)
-            
-            OS-->>C: 주문 상세
-            C-->>U: 주문 상세 표시
-        end
+    alt 주문 없음 또는 권한 없음
+        Repo-->>AS: 조회 실패
+        AS-->>C: 404 Not Found
+        C-->>U: 주문을 찾을 수 없습니다
+    else 정상 조회
+        Repo-->>AS: 주문 상세 정보
+        Note over AS: 주문, 상품 정보 조합
+        AS-->>C: 주문 상세
+        C-->>U: 주문 상세 응답
     end
 ```
