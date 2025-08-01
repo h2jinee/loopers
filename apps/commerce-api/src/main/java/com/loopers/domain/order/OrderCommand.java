@@ -1,6 +1,7 @@
 package com.loopers.domain.order;
 
 import com.loopers.domain.order.vo.ReceiverInfo;
+import com.loopers.domain.product.ProductEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -25,6 +26,42 @@ public class OrderCommand {
             if (receiverInfo == null) {
                 throw new CoreException(ErrorType.BAD_REQUEST, "수령인 정보는 필수입니다.");
             }
+        }
+    }
+    
+    public record CreateWithProduct(
+        String userId,
+        Long productId,
+        Integer quantity,
+        ReceiverInfo receiverInfo,
+        ProductEntity product
+    ) {
+        public CreateWithProduct {
+            if (userId == null || userId.isBlank()) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "사용자 ID는 필수입니다.");
+            }
+            if (productId == null) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "상품 ID는 필수입니다.");
+            }
+            if (quantity == null || quantity <= 0) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "수량은 1개 이상이어야 합니다.");
+            }
+            if (receiverInfo == null) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "수령인 정보는 필수입니다.");
+            }
+            if (product == null) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "상품 정보는 필수입니다.");
+            }
+        }
+        
+        public static CreateWithProduct from(Create create, ProductEntity product) {
+            return new CreateWithProduct(
+                create.userId(),
+                create.productId(),
+                create.quantity(),
+                create.receiverInfo(),
+                product
+            );
         }
     }
     

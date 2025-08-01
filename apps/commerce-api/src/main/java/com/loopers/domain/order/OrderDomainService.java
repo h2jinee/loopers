@@ -1,10 +1,7 @@
 package com.loopers.domain.order;
 
 import com.loopers.domain.common.Money;
-import com.loopers.domain.order.vo.ReceiverInfo;
-import com.loopers.domain.product.ProductCommand;
 import com.loopers.domain.product.ProductEntity;
-import com.loopers.domain.product.ProductDomainService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -20,16 +17,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderDomainService {
     
-    private final ProductDomainService productDomainService;
     private final StockReservationRepository stockReservationRepository;
     private final OrderRepository orderRepository;
     
-    public OrderCreationResult createOrder(OrderCommand.Create command) {
-        // 상품 정보 조회
-        ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-        ProductEntity product = productDomainService.getProduct(getProductCommand);
+    public OrderCreationResult createOrder(OrderCommand.CreateWithProduct command) {
+        ProductEntity product = command.product();
         
-        // 재고 확인
         if (!product.isAvailable()) {
             throw new CoreException(ErrorType.CONFLICT, 
                 "구매할 수 없는 상품입니다. 상품명: " + product.getNameKo());
@@ -40,10 +33,8 @@ public class OrderDomainService {
                 "재고가 부족합니다. 상품명: " + product.getNameKo());
         }
         
-        // 주문 생성
         OrderEntity order = new OrderEntity(command.userId(), command.receiverInfo());
         
-        // 주문 항목 추가
         Money totalPrice = product.getTotalPrice();
         OrderLineEntity orderLine = new OrderLineEntity(
             product.getId(),
@@ -73,14 +64,6 @@ public class OrderDomainService {
         List<StockReservationEntity> reservations = stockReservationRepository.findByOrderId(orderId);
         
         for (StockReservationEntity reservation : reservations) {
-            // 재고 복원
-            if (reservation.getStatus() == StockReservationEntity.ReservationStatus.RESERVED) {
-                ProductCommand.IncreaseStock increaseCommand = new ProductCommand.IncreaseStock(
-                    reservation.getProductId(), reservation.getQuantity()
-                );
-                productDomainService.increaseStock(increaseCommand);
-            }
-            
             reservation.cancel();
             stockReservationRepository.save(reservation);
         }

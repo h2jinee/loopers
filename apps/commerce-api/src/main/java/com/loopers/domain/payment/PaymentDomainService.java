@@ -2,9 +2,7 @@ package com.loopers.domain.payment;
 
 import com.loopers.domain.common.Money;
 import com.loopers.domain.order.OrderEntity;
-import com.loopers.domain.point.PointCommand;
 import com.loopers.domain.point.PointEntity;
-import com.loopers.domain.point.PointDomainService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -15,13 +13,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PaymentDomainService {
     
-    private final PointDomainService pointDomainService;
-    
-    public void processPayment(PaymentCommand.ProcessPayment command) {
+    public void processPayment(PaymentCommand.ProcessPaymentWithPoint command) {
         OrderEntity order = command.order();
         String userId = command.userId();
+        PointEntity point = command.point();
         
-        // 결제 가능 여부 확인
         if (!order.getStatus().isPaymentRequired()) {
             throw new CoreException(ErrorType.BAD_REQUEST, "결제 대기 상태가 아닙니다.");
         }
@@ -30,9 +26,6 @@ public class PaymentDomainService {
             throw new CoreException(ErrorType.CONFLICT, "결제 시간이 만료되었습니다.");
         }
         
-        // 포인트 잔액 확인
-        PointCommand.GetOne getPointCommand = new PointCommand.GetOne(userId);
-        PointEntity point = pointDomainService.getPointEntity(getPointCommand);
         Money orderAmount = order.getTotalAmount();
         
         if (!point.canPay(orderAmount)) {
@@ -40,9 +33,5 @@ public class PaymentDomainService {
                 "포인트가 부족합니다. 필요 포인트: " + orderAmount.amount() + 
                 ", 보유 포인트: " + point.getBalance().amount());
         }
-        
-        // 포인트 차감
-        PointCommand.Use useCommand = new PointCommand.Use(userId, orderAmount, order.getId());
-        pointDomainService.usePoint(useCommand);
     }
 }

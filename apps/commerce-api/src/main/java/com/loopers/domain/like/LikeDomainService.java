@@ -1,7 +1,8 @@
 package com.loopers.domain.like;
 
-import com.loopers.domain.product.ProductCommand;
-import com.loopers.domain.product.ProductDomainService;
+import com.loopers.domain.product.ProductRepository;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -10,19 +11,17 @@ import org.springframework.stereotype.Service;
 public class LikeDomainService {
     
     private final LikeRepository likeRepository;
-    private final ProductDomainService productDomainService;
+    private final ProductRepository productRepository;
 
     public boolean addLike(LikeCommand.Toggle command) {
-        // 상품 존재 여부 확인
-        ProductCommand.ValidateExists validateCommand = new ProductCommand.ValidateExists(command.productId());
-        productDomainService.validateProductExists(validateCommand);
+        if (!productRepository.existsById(command.productId())) {
+            throw new CoreException(ErrorType.NOT_FOUND, "상품을 찾을 수 없습니다.");
+        }
         
-        // 이미 존재할 경우 false 반환
         if (likeRepository.existsByUserIdAndProductId(command.userId(), command.productId())) {
             return false;
         }
 
-		// 새로 추가된 경우 true 반환
         LikeEntity like = new LikeEntity(command.userId(), command.productId());
         likeRepository.save(like);
         return true;

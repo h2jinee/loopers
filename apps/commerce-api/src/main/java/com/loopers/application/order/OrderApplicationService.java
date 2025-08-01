@@ -3,7 +3,12 @@ package com.loopers.application.order;
 import com.loopers.domain.order.*;
 import com.loopers.domain.payment.PaymentCommand;
 import com.loopers.domain.payment.PaymentDomainService;
+import com.loopers.domain.product.ProductCommand;
 import com.loopers.domain.product.ProductDomainService;
+import com.loopers.domain.product.ProductEntity;
+import com.loopers.domain.point.PointCommand;
+import com.loopers.domain.point.PointDomainService;
+import com.loopers.domain.point.PointEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -13,58 +18,73 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class OrderApplicationService {
     
     private final OrderDomainService orderDomainService;
     private final ProductDomainService productDomainService;
     private final PaymentDomainService paymentDomainService;
+    private final PointDomainService pointDomainService;
     private final StockReservationRepository stockReservationRepository;
     
     @Transactional
     public OrderInfo.CreateResult createOrder(OrderCommand.Create command) {
         try {
-            // 1. 주문 생성 및 재고 예약
+            ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
+            ProductEntity product = productDomainService.getProduct(getProductCommand);
+            
+            OrderCommand.CreateWithProduct createWithProductCommand = 
+                OrderCommand.CreateWithProduct.from(command, product);
             OrderDomainService.OrderCreationResult creationResult = 
-                orderDomainService.createOrder(command);
+                orderDomainService.createOrder(createWithProductCommand);
             
             OrderEntity order = creationResult.order();
             
-            // 2. 주문 저장
             order = orderDomainService.saveOrder(order);
             Long orderId = order.getId();
             
-            // 3. 재고 예약 생성 및 저장
             StockReservationEntity reservation = orderDomainService.createStockReservation(
                 orderId, creationResult.productId(), creationResult.quantity()
             );
             stockReservationRepository.save(reservation);
             
-            // 4. 재고 임시 차감
-            productDomainService.decreaseStock(new com.loopers.domain.product.ProductCommand.DecreaseStock(
+            productDomainService.decreaseStock(new ProductCommand.DecreaseStock(
                 command.productId(), command.quantity()
             ));
             
-            // 5. 결제 처리
             try {
+                PointCommand.GetOne getPointCommand = new PointCommand.GetOne(command.userId());
+                PointEntity point = pointDomainService.getPointEntity(getPointCommand);
+                
                 PaymentCommand.ProcessPayment paymentCommand = 
                     new PaymentCommand.ProcessPayment(order, command.userId());
-                paymentDomainService.processPayment(paymentCommand);
+                PaymentCommand.ProcessPaymentWithPoint paymentWithPointCommand = 
+                    PaymentCommand.ProcessPaymentWithPoint.from(paymentCommand, point);
+                paymentDomainService.processPayment(paymentWithPointCommand);
                 
-                // 결제 성공
+                PointCommand.Use useCommand = new PointCommand.Use(
+                    command.userId(), order.getTotalAmount(), order.getId()
+                );
+                pointDomainService.usePoint(useCommand);
+                
                 order.confirmPayment();
                 orderDomainService.updateOrder(order);
                 
-                // 재고 예약 확정
                 orderDomainService.confirmStockReservations(orderId);
                 
             } catch (CoreException e) {
-                // 결제 실패
                 order.failPayment();
                 orderDomainService.updateOrder(order);
                 
-                // 재고 롤백
                 orderDomainService.cancelStockReservations(orderId);
+                
+                for (StockReservationEntity stockReservation : stockReservationRepository.findByOrderId(orderId)) {
+                    if (stockReservation.getStatus() == StockReservationEntity.ReservationStatus.RESERVED) {
+                        ProductCommand.IncreaseStock increaseCommand = new ProductCommand.IncreaseStock(
+                            stockReservation.getProductId(), stockReservation.getQuantity()
+                        );
+                        productDomainService.increaseStock(increaseCommand);
+                    }
+                }
                 
                 throw e;
             }
