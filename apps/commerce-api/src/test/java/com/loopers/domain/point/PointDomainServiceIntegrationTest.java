@@ -15,7 +15,7 @@ import com.loopers.domain.point.vo.ChargePoint;
 import com.loopers.domain.user.UserCommand;
 import com.loopers.domain.user.UserEntity;
 import com.loopers.domain.user.UserRepository;
-import com.loopers.domain.user.UserService;
+import com.loopers.domain.user.UserDomainService;
 import com.loopers.domain.user.vo.Birth;
 import com.loopers.domain.user.vo.Email;
 import com.loopers.domain.user.vo.UserId;
@@ -23,19 +23,22 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
 @SpringBootTest
-public class PointServiceIntegrationTest {
+public class PointDomainServiceIntegrationTest {
 
 	@Autowired
-	private PointService pointService;
+	private PointDomainService pointDomainService;
 
 	@Autowired
-	private UserService userService;
+	private UserDomainService userDomainService;
 
 	@Autowired
 	private UserRepository userRepository;
 
 	@Autowired
 	private PointRepository pointRepository;
+	
+	@Autowired
+	private PointHistoryRepository pointHistoryRepository;
 
 	@BeforeEach
 	void setUp() {
@@ -46,15 +49,17 @@ public class PointServiceIntegrationTest {
 			new Birth("1997-01-18"),
 			new Email("wjsgmlwls97@gmail.com")
 		);
-		UserEntity user = userService.createUser(command);
+		UserEntity user = userDomainService.createUser(command);
 		// 포인트 초기화
-		pointService.initializeUserPoint(user.getUserId());
+		PointCommand.Initialize initCommand = new PointCommand.Initialize(user.getUserId());
+		pointDomainService.initializeUserPoint(initCommand);
 	}
 
 	@AfterEach
 	void tearDown() {
 		userRepository.clear();
 		pointRepository.clear();
+		pointHistoryRepository.clear();
 	}
 
 	/*
@@ -72,7 +77,9 @@ public class PointServiceIntegrationTest {
 			String userId = "h2jinee";
 
 			// act
-			Long point = pointService.getUserPoint(userId);
+			Long point = pointRepository.findById(userId)
+				.map(p -> p.getBalance().amount().longValue())
+				.orElse(null);
 
 			// assert
 			assertThat(point).isNotNull();
@@ -86,10 +93,12 @@ public class PointServiceIntegrationTest {
 			String userId = "devin";
 
 			// act
-			Long point = pointService.getUserPoint(userId);
+			Long point = pointRepository.findById(userId)
+				.map(p -> p.getBalance().amount().longValue())
+				.orElse(null);
 
 			// assert
-			assertThat(point).isEqualTo(0L);
+			assertThat(point).isNull();
 		}
 	}
 
@@ -112,7 +121,7 @@ public class PointServiceIntegrationTest {
 
 			// act & assert
 			CoreException exception = assertThrows(CoreException.class, () -> {
-				pointService.charge(command);
+				pointDomainService.charge(command);
 			});
 
 			// assert

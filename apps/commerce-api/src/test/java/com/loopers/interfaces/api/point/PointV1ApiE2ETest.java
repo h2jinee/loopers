@@ -59,10 +59,10 @@ public class PointV1ApiE2ETest {
 	 - [x]  포인트 조회에 성공할 경우, 보유 포인트를 응답으로 반환한다.
 	 - [x]  X-USER-ID 헤더가 없을 경우, 400 Bad Request 응답을 반환한다.
 	 */
-	@DisplayName("GET /api/v1/point")
+	@DisplayName("GET /api/v1/points")
 	@Nested
 	class getUserPoint {
-		private final String ENDPOINT = "/api/v1/point";
+		private final String ENDPOINT = "/api/v1/points";
 
 		@DisplayName("포인트 조회에 성공할 경우, 보유 포인트를 응답으로 반환한다.")
 		@Test
@@ -112,10 +112,10 @@ public class PointV1ApiE2ETest {
 	 - [x]  존재하는 유저가 1000원을 충전할 경우, 충전된 보유 총량을 응답으로 반환한다.
 	 - [x]  존재하지 않는 유저로 요청할 경우, 404 Not Found 응답을 반환한다.
 	 */
-	@DisplayName("POST /api/v1/point")
+	@DisplayName("POST /api/v1/points/charge")
 	@Nested
 	class chargeUserPoint {
-		private final String ENDPOINT = "/api/v1/point";
+		private final String ENDPOINT = "/api/v1/points/charge";
 
 		@DisplayName("존재하는 유저가 1000원을 충전할 경우, 충전된 보유 총량을 응답으로 반환한다.")
 		@Test

@@ -1,7 +1,7 @@
 package com.loopers.interfaces.api.user;
 
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import com.loopers.interfaces.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,8 +15,8 @@ public interface UserV1ApiSpec {
         @Valid @RequestBody UserDto.V1.SignUp.Request signUpRequest
     );
 
-    @Operation(summary = "사용자 정보 조회")
+    @Operation(summary = "내 정보 조회")
     ApiResponse<UserDto.V1.GetUser.Response> getUserInfo(
-        @PathVariable String userId
+        @RequestHeader("X-USER-ID") String userId
     );
 }

@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserDomainService {
     private final UserRepository userRepository;
 
     public UserEntity createUser(UserCommand.Create command) {
@@ -29,8 +29,8 @@ public class UserService {
         return userRepository.save(user);
     }
     
-    public UserEntity getUserInfo(String userId) {
-        return userRepository.findById(userId)
+    public UserEntity getUserInfo(UserCommand.GetOne command) {
+        return userRepository.findById(command.userId())
             .orElseThrow(() -> new CoreException(
                 ErrorType.NOT_FOUND, 
                 "존재하지 않는 사용자입니다."

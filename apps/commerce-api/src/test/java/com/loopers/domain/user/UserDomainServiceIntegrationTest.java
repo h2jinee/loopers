@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,13 +19,13 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
 @SpringBootTest
-public class UserServiceIntegrationTest {
+public class UserDomainServiceIntegrationTest {
 
 	@MockitoSpyBean
     private UserRepository userRepository;
 
 	@Autowired
-	private UserService userService;
+	private UserDomainService userDomainService;
 
     @AfterEach
     void tearDown() {
@@ -54,7 +53,7 @@ public class UserServiceIntegrationTest {
 			);
 
 			// act
-			UserEntity savedUser = userService.createUser(command);
+			UserEntity savedUser = userDomainService.createUser(command);
 
 			// assert
 			assertThat(savedUser).isNotNull();
@@ -87,9 +86,9 @@ public class UserServiceIntegrationTest {
 			);
 
 			// act
-			userService.createUser(user);
+			userDomainService.createUser(user);
 			CoreException exception = assertThrows(CoreException.class, () -> {
-				userService.createUser(newUser);
+				userDomainService.createUser(newUser);
 			});
 
 			// assert
@@ -116,10 +115,11 @@ public class UserServiceIntegrationTest {
 				new Birth("1997-01-18"),
 				new Email("wjsgmlwls97@gmail.com")
 			);
-			UserEntity user = userService.createUser(command);
+			UserEntity user = userDomainService.createUser(command);
 
 			// act
-			UserEntity foundUser = userService.getUserInfo("h2jinee");
+			UserCommand.GetOne getCommand = new UserCommand.GetOne("h2jinee");
+			UserEntity foundUser = userDomainService.getUserInfo(getCommand);
 
 			// assert
 			assertThat(foundUser).isNotNull();
@@ -139,11 +139,12 @@ public class UserServiceIntegrationTest {
 				new Birth("1997-01-18"),
 				new Email("wjsgmlwls97@gmail.com")
 			);
-			userService.createUser(command);
+			userDomainService.createUser(command);
 
 			// act & assert
 			CoreException exception = assertThrows(CoreException.class, () -> {
-				userService.getUserInfo("devin");
+				UserCommand.GetOne getCommand = new UserCommand.GetOne("devin");
+				userDomainService.getUserInfo(getCommand);
 			});
 
 			// assert
