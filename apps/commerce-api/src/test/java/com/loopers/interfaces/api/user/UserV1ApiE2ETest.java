@@ -132,21 +132,22 @@ public class UserV1ApiE2ETest {
 	 - [x]  내 정보 조회에 성공할 경우, 해당하는 유저 정보를 응답으로 반환한다.
 	 - [x]  존재하지 않는 ID로 조회할 경우, 404 Not Found 응답을 반환한다.
 	*/
-	@DisplayName("GET /api/v1/users/{userId}")
+	@DisplayName("GET /api/v1/users/me")
 	@Nested
 	class GetUserInfo {
-		private final String ENDPOINT = "/api/v1/users/{userId}";
+		private final String ENDPOINT = "/api/v1/users/me";
 
 		@DisplayName("내 정보 조회에 성공할 경우, 해당하는 유저 정보를 응답으로 반환한다.")
 		@Test
 		void returnsUserInfo_whenUserExists() {
 			// arrange
-			String userId = "h2jinee";
+			HttpHeaders headers = new HttpHeaders();
+			headers.add("X-USER-ID", "h2jinee");
 
 			// act
 			ParameterizedTypeReference<ApiResponse<UserDto.V1.GetUser.Response>> responseType = new ParameterizedTypeReference<>() {};
 			ResponseEntity<ApiResponse<UserDto.V1.GetUser.Response>> response =
-				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, null, responseType, userId);
+				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, new HttpEntity<>(headers), responseType);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -168,12 +169,13 @@ public class UserV1ApiE2ETest {
 		@Test
 		void returnsNotFound_whenUserIdDoesNotExist() {
 			// arrange
-			String userId = "devin";
+			HttpHeaders headers = new HttpHeaders();
+			headers.add("X-USER-ID", "devin");
 
 			// act
 			ParameterizedTypeReference<ApiResponse<UserDto.V1.GetUser.Response>> responseType = new ParameterizedTypeReference<>() {};
 			ResponseEntity<ApiResponse<UserDto.V1.GetUser.Response>> response =
-				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, null, responseType, userId);
+				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, new HttpEntity<>(headers), responseType);
 
 			// assert
 			assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
