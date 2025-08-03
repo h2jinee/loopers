@@ -2,10 +2,11 @@ package com.loopers.application.user;
 
 import org.springframework.stereotype.Service;
 
-import com.loopers.domain.point.PointService;
+import com.loopers.domain.point.PointCommand;
+import com.loopers.domain.point.PointDomainService;
 import com.loopers.domain.user.UserCommand;
 import com.loopers.domain.user.UserEntity;
-import com.loopers.domain.user.UserService;
+import com.loopers.domain.user.UserDomainService;
 import com.loopers.domain.user.vo.Birth;
 import com.loopers.domain.user.vo.Email;
 import com.loopers.domain.user.vo.UserId;
@@ -17,8 +18,8 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class UserApplicationService {
-    private final UserService userService;
-    private final PointService pointService;
+    private final UserDomainService userDomainService;
+    private final PointDomainService pointDomainService;
 
 	@Transactional
     public UserDto.V1.SignUp.Response signUp(UserDto.V1.SignUp.Request request) {
@@ -30,9 +31,10 @@ public class UserApplicationService {
             new Email(request.email())
         );
         
-        UserEntity savedUser = userService.createUser(command);
+        UserEntity savedUser = userDomainService.createUser(command);
         
-        pointService.initializeUserPoint(savedUser.getUserId());
+        PointCommand.Initialize initializeCommand = new PointCommand.Initialize(savedUser.getUserId());
+        pointDomainService.initializeUserPoint(initializeCommand);
         
         return new UserDto.V1.SignUp.Response(
             savedUser.getUserId(),
@@ -44,7 +46,8 @@ public class UserApplicationService {
     }
     
     public UserDto.V1.GetUser.Response getUserInfo(String userId) {
-        UserEntity user = userService.getUserInfo(userId);
+        UserCommand.GetOne command = new UserCommand.GetOne(userId);
+        UserEntity user = userDomainService.getUserInfo(command);
         
         return new UserDto.V1.GetUser.Response(
             user.getUserId(),

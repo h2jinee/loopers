@@ -24,4 +24,14 @@ public class UserCommand {
             }
 		}
     }
+    
+    public record GetOne(
+        String userId
+    ) {
+        public GetOne {
+            if (userId == null || userId.isBlank()) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "사용자 ID는 필수입니다.");
+            }
+        }
+    }
 }

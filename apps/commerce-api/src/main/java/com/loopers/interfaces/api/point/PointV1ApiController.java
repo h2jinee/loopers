@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.loopers.domain.point.vo.ChargePoint;
 import com.loopers.domain.point.PointCommand;
 import com.loopers.domain.point.PointEntity;
-import com.loopers.domain.point.PointService;
+import com.loopers.domain.point.PointDomainService;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -20,14 +20,14 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/point")
+@RequestMapping("/api/v1/points")
 public class PointV1ApiController implements PointV1ApiSpec {
 
     private static final String USER_ID_HEADER = "X-USER-ID";
 
-    private final PointService pointService;
+    private final PointDomainService pointDomainService;
 
-    @PostMapping
+    @PostMapping("/charge")
     @Override
     public ApiResponse<PointDto.V1.Charge.Response> chargeUserPoint(
         @RequestBody @Valid PointDto.V1.Charge.Request request
@@ -37,11 +37,11 @@ public class PointV1ApiController implements PointV1ApiSpec {
             new ChargePoint(request.amount())
         );
 
-        PointEntity charged = pointService.charge(command);
+        PointEntity charged = pointDomainService.charge(command);
 
         PointDto.V1.Charge.Response response = new PointDto.V1.Charge.Response(
             charged.getUserId(),
-            charged.getPoint()
+            charged.getBalance().amount().longValue()
         );
 
         return ApiResponse.success(response);
@@ -56,11 +56,12 @@ public class PointV1ApiController implements PointV1ApiSpec {
             throw new CoreException(ErrorType.BAD_REQUEST, USER_ID_HEADER + " 헤더가 없습니다.");
         }
 
-        Long userPoint = pointService.getUserPoint(userId);
+        PointCommand.GetOne command = new PointCommand.GetOne(userId);
+        PointEntity point = pointDomainService.getPointEntity(command);
 
         PointDto.V1.GetPoint.Response response = new PointDto.V1.GetPoint.Response(
             userId,
-            userPoint
+            point.getBalance().amount().longValue()
         );
 
         return ApiResponse.success(response);
