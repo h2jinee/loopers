@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Repository
 public class BrandRepositoryImpl implements BrandRepository {
     
+    // TODO DB 추가 시 Map -> DB 변경해야 함.
     private final Map<Long, BrandEntity> store = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(1);
     

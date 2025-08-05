@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 @Repository
 public class LikeRepositoryImpl implements LikeRepository {
     
+    // TODO DB 추가 시 Map -> DB 변경해야 함.
     private final Map<Long, LikeEntity> store = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(1);
     

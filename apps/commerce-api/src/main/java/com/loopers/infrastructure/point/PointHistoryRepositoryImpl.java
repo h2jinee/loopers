@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class PointHistoryRepositoryImpl implements PointHistoryRepository {
     
+    // TODO DB 추가 시 Map -> DB 변경해야 함.
     private final Map<Long, PointHistoryEntity> store = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(1);
     

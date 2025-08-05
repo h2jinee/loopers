@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Repository
 public class ProductCountRepositoryImpl implements ProductCountRepository {
     
+    // TODO DB 추가 시 Map -> DB 변경해야 함.
     private final Map<Long, ProductCountEntity> store = new ConcurrentHashMap<>();
     
     @Override

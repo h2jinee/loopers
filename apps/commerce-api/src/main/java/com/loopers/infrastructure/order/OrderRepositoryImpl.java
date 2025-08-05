@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderRepositoryImpl implements OrderRepository {
     
+    // TODO DB 추가 시 Map -> DB 변경해야 함.
     private final Map<Long, OrderEntity> store = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(1);
     
