@@ -2,6 +2,7 @@ package com.loopers.domain.order;
 
 import com.loopers.domain.common.Money;
 import com.loopers.domain.product.ProductEntity;
+import com.loopers.domain.product.ProductStockService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -19,16 +20,17 @@ public class OrderDomainService {
     
     private final StockReservationRepository stockReservationRepository;
     private final OrderRepository orderRepository;
+    private final ProductStockService productStockService;
     
     public OrderCreationResult createOrder(OrderCommand.CreateWithProduct command) {
         ProductEntity product = command.product();
         
-        if (!product.isAvailable()) {
+        if (!productStockService.isAvailable(product.getId())) {
             throw new CoreException(ErrorType.CONFLICT, 
                 "구매할 수 없는 상품입니다. 상품명: " + product.getNameKo());
         }
         
-        if (!product.hasStock(command.quantity())) {
+        if (!productStockService.hasStock(product.getId(), command.quantity())) {
             throw new CoreException(ErrorType.CONFLICT, 
                 "재고가 부족합니다. 상품명: " + product.getNameKo());
         }

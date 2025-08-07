@@ -8,6 +8,7 @@ import com.loopers.domain.product.ProductCommand;
 import com.loopers.domain.product.ProductCountCommand;
 import com.loopers.domain.product.ProductDomainService;
 import com.loopers.domain.product.ProductCountService;
+import com.loopers.domain.product.ProductStockService;
 import com.loopers.support.error.CoreException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ public class LikeApplicationService {
     private final LikeRepository likeRepository;
     private final ProductDomainService productDomainService;
     private final ProductCountService productCountService;
+    private final ProductStockService productStockService;
     
     @Transactional
     public LikeInfo.Result addLike(String userId, Long productId) {
@@ -133,7 +135,7 @@ public class LikeApplicationService {
                 product.getDescription(),
                 product.getPrice().amount(),
                 likeCount,
-                product.isAvailable(),
+                productStockService.isAvailable(product.getId()),
                 like.getCreatedAt()
             );
         });

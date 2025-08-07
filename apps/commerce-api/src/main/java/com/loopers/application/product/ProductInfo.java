@@ -1,6 +1,7 @@
 package com.loopers.application.product;
 
 import com.loopers.domain.product.ProductEntity;
+import com.loopers.domain.product.ProductStockService;
 import com.loopers.domain.product.vo.ProductStatus;
 
 import java.math.BigDecimal;
@@ -22,7 +23,7 @@ public class ProductInfo {
         Long likeCount,
         boolean isAvailable
     ) {
-        public static Detail from(ProductEntity product, String brandName) {
+        public static Detail from(ProductEntity product, String brandName, ProductStockService stockService) {
             return new Detail(
                 product.getId(),
                 product.getBrandId(),
@@ -32,11 +33,11 @@ public class ProductInfo {
                 product.getPrice().amount(),
                 product.getShippingFee().amount(),
                 product.getTotalPrice().amount(),
-                product.getStock(),
+                stockService.getStock(product.getId()),
                 product.getStatus(),
                 product.getReleaseYear(),
                 product.getLikeCount(),
-                product.isAvailable()
+                stockService.isAvailable(product.getId())
             );
         }
     }
@@ -51,7 +52,7 @@ public class ProductInfo {
         Long likeCount,
         boolean isAvailable
     ) {
-        public static Summary from(ProductEntity product, String brandName) {
+        public static Summary from(ProductEntity product, String brandName, ProductStockService stockService) {
             return new Summary(
                 product.getId(),
                 product.getBrandId(),
@@ -60,7 +61,7 @@ public class ProductInfo {
                 product.getDescription(),
                 product.getPrice().amount(),
                 product.getLikeCount(),
-                product.isAvailable()
+                stockService.isAvailable(product.getId())
             );
         }
     }

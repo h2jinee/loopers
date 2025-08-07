@@ -17,6 +17,7 @@ public class ProductDomainService {
     
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
+    private final ProductStockService productStockService;
 
     public ProductEntity getProduct(ProductCommand.GetOne command) {
         return getProductById(command.productId());
@@ -38,20 +39,15 @@ public class ProductDomainService {
     }
     
     public void decreaseStock(ProductCommand.DecreaseStock command) {
-        ProductEntity product = getProductById(command.productId());
-        
-        if (!product.isAvailable()) {
+        if (!productStockService.isAvailable(command.productId())) {
             throw new CoreException(ErrorType.CONFLICT, "구매할 수 없는 상품입니다.");
         }
         
-        product.decreaseStock(command.quantity());
-        productRepository.save(product);
+        productStockService.decreaseStock(command.productId(), command.quantity());
     }
     
     public void increaseStock(ProductCommand.IncreaseStock command) {
-        ProductEntity product = getProductById(command.productId());
-        product.increaseStock(command.quantity());
-        productRepository.save(product);
+        productStockService.increaseStock(command.productId(), command.quantity());
     }
 
     private Pageable createPageable(ProductCommand.GetList command) {
