@@ -1,6 +1,7 @@
 package com.loopers.domain.product;
 
-import com.loopers.domain.like.LikeRepository;
+import com.loopers.infrastructure.product.ProductCountJpaRepository;
+import com.loopers.infrastructure.like.LikeJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,23 +10,23 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ProductCountService {
     
-    private final ProductCountRepository productCountRepository;
-    private final LikeRepository likeRepository;
+    private final ProductCountJpaRepository productCountJpaRepository;
+    private final LikeJpaRepository likeJpaRepository;
 
     // TODO 배치로 변경 필요
     @Transactional
     public void updateLikeCount(ProductCountCommand.UpdateLikeCount command) {
-        Long likeCount = likeRepository.countByProductId(command.productId());
+        Long likeCount = likeJpaRepository.countByProductId(command.productId());
         
-        ProductCountEntity productCount = productCountRepository.findByProductId(command.productId())
+        ProductCountEntity productCount = productCountJpaRepository.findByProductId(command.productId())
             .orElseGet(() -> new ProductCountEntity(command.productId()));
         
         productCount.updateLikeCount(likeCount);
-        productCountRepository.save(productCount);
+        productCountJpaRepository.save(productCount);
     }
     
     public Long getLikeCount(ProductCountCommand.GetLikeCount command) {
-        return productCountRepository.findByProductId(command.productId())
+        return productCountJpaRepository.findByProductId(command.productId())
             .map(ProductCountEntity::getLikeCount)
             .orElse(0L);
     }

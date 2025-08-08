@@ -17,9 +17,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import com.loopers.domain.point.PointRepository;
+import com.loopers.infrastructure.point.PointJpaRepository;
 import com.loopers.domain.user.UserEntity;
-import com.loopers.domain.user.UserRepository;
+import com.loopers.infrastructure.user.UserJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.api.user.UserDto;
 
@@ -30,10 +30,10 @@ public class PointV1ApiE2ETest {
 	private TestRestTemplate testRestTemplate;
 
 	@Autowired
-	private UserRepository userRepository;
+	private UserJpaRepository userJpaRepository;
 
 	@Autowired
-	private PointRepository pointRepository;
+	private PointJpaRepository pointJpaRepository;
 
 	@BeforeEach
 	void setUp() {
@@ -50,8 +50,8 @@ public class PointV1ApiE2ETest {
 	// TODO Repository 주입을 안 받게 할 수는 없을까?
 	@AfterEach
 	void tearDown() {
-		userRepository.clear();
-		pointRepository.clear();
+		userJpaRepository.deleteAll();
+		pointJpaRepository.deleteAll();
 	}
 
 	/**

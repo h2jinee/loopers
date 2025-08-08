@@ -1,6 +1,6 @@
 package com.loopers.interfaces.api.brand;
 
-import com.loopers.application.brand.BrandInfo;
+import com.loopers.application.brand.BrandResult;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
@@ -24,7 +24,7 @@ public class BrandDto {
                 String nameEn,
                 String profileImageUrl
             ) {
-                public static Response from(BrandInfo.Summary summary) {
+                public static Response from(BrandResult.Summary summary) {
                     return new Response(
                         summary.brandId(),
                         summary.nameKo(),
@@ -44,7 +44,7 @@ public class BrandDto {
                 String profileImageUrl,
                 Integer productCount
             ) {
-                public static Response from(BrandInfo.Detail detail) {
+                public static Response from(BrandResult.Detail detail) {
                     return new Response(
                         detail.brandId(),
                         detail.nameKo(),

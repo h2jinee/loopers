@@ -1,7 +1,5 @@
 package com.loopers.domain.point;
 
 public interface PointHistoryRepository {
-    PointHistoryEntity save(PointHistoryEntity history);
-    
-    void clear();
+    // 도메인 특화 메서드들만 정의 (현재는 없음)
 }

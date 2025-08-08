@@ -1,8 +1,8 @@
 package com.loopers.interfaces.api.order;
 
-import com.loopers.application.order.OrderApplicationService;
-import com.loopers.application.order.OrderInfo;
-import com.loopers.domain.order.OrderCommand;
+import com.loopers.application.order.OrderFacade;
+import com.loopers.application.order.OrderCriteria;
+import com.loopers.application.order.OrderResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/orders")
 public class OrderV1Controller implements OrderV1ApiSpec {
     
-    private final OrderApplicationService orderApplicationService;
+    private final OrderFacade orderFacade;
     
     @PostMapping
     @Override
@@ -26,14 +26,14 @@ public class OrderV1Controller implements OrderV1ApiSpec {
     ) {
         validateUserId(userId);
         
-        OrderCommand.Create command = new OrderCommand.Create(
+        OrderCriteria.Create criteria = new OrderCriteria.Create(
             userId,
             request.productId(),
             request.quantity(),
             request.toReceiverInfo()
         );
         
-        OrderInfo.CreateResult result = orderApplicationService.createOrder(command);
+        OrderResult.CreateResult result = orderFacade.createOrder(criteria);
         return ApiResponse.success(OrderDto.V1.Create.Response.from(result));
     }
     
@@ -45,7 +45,8 @@ public class OrderV1Controller implements OrderV1ApiSpec {
     ) {
         validateUserId(userId);
         
-        OrderInfo.Detail detail = orderApplicationService.getOrderDetail(orderId, userId);
+        OrderCriteria.GetDetail criteria = new OrderCriteria.GetDetail(userId, orderId);
+        OrderResult.Detail detail = orderFacade.getOrderDetail(criteria);
         return ApiResponse.success(OrderDto.V1.GetDetail.Response.from(detail));
     }
     
@@ -58,7 +59,8 @@ public class OrderV1Controller implements OrderV1ApiSpec {
     ) {
         validateUserId(userId);
         
-        Page<OrderInfo.Summary> orders = orderApplicationService.getUserOrders(userId, page, size);
+        OrderCriteria.GetList criteria = new OrderCriteria.GetList(userId, page, size);
+        Page<OrderResult.Summary> orders = orderFacade.getUserOrders(criteria);
         Page<OrderDto.V1.GetList.Response> response = orders.map(OrderDto.V1.GetList.Response::from);
         
         return ApiResponse.success(response);
