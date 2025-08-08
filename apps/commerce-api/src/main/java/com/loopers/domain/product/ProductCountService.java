@@ -13,21 +13,18 @@ public class ProductCountService {
     private final ProductCountJpaRepository productCountJpaRepository;
     private final LikeJpaRepository likeJpaRepository;
 
-    // TODO 배치로 변경 필요
+	// 비관적 락
     @Transactional
-    public void updateLikeCount(ProductCountCommand.UpdateLikeCount command) {
-        Long likeCount = likeJpaRepository.countByProductId(command.productId());
-        
-        ProductCountEntity productCount = productCountJpaRepository.findByProductId(command.productId())
+    public void updateLikeCountPessimistic(ProductCountCommand.UpdateLikeCount command) {
+        // 1. 락 획득
+        ProductCountEntity productCount = productCountJpaRepository.findByProductIdWithPessimisticLock(command.productId())
             .orElseGet(() -> new ProductCountEntity(command.productId()));
         
+        // 2. 락 획득 후 COUNT 쿼리 실행
+        Long likeCount = likeJpaRepository.countByProductId(command.productId());
+        
+        // 3. 업데이트
         productCount.updateLikeCount(likeCount);
         productCountJpaRepository.save(productCount);
-    }
-    
-    public Long getLikeCount(ProductCountCommand.GetLikeCount command) {
-        return productCountJpaRepository.findByProductId(command.productId())
-            .map(ProductCountEntity::getLikeCount)
-            .orElse(0L);
     }
 }

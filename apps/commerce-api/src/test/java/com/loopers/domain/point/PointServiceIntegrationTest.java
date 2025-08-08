@@ -79,7 +79,7 @@ public class PointServiceIntegrationTest {
 			String userId = "h2jinee";
 
 			// act
-			Long point = pointJpaRepository.findById(userId)
+			Long point = pointJpaRepository.findByUserId(userId)
 				.map(p -> p.getBalance().amount().longValue())
 				.orElse(null);
 
@@ -95,7 +95,7 @@ public class PointServiceIntegrationTest {
 			String userId = "devin";
 
 			// act
-			Long point = pointJpaRepository.findById(userId)
+			Long point = pointJpaRepository.findByUserId(userId)
 				.map(p -> p.getBalance().amount().longValue())
 				.orElse(null);
 

@@ -16,23 +16,19 @@ public class ProductFacade {
     private final ProductStockService productStockService;
     
     public ProductResult.Detail getProductDetail(ProductCriteria.GetDetail criteria) {
-        // 1. 상품 정보와 브랜드 정보를 함께 조회
         ProductCommand.GetOne command = criteria.toCommand();
         ProductService.ProductWithBrand productWithBrand = productService.getProductWithBrand(command);
         
-        // 2. 상품 상세 정보에 재고 정보를 포함하여 응답 생성
         ProductInfo.Detail domainInfo = ProductInfo.Detail.from(productWithBrand.product(), productWithBrand.getBrandName(), productStockService);
         return ProductResult.Detail.from(domainInfo);
     }
     
     public Page<ProductResult.Summary> getProductList(ProductCriteria.GetList criteria) {
-        // 1. 상품 목록과 브랜드 정보를 함께 조회
         ProductCommand.GetList command = criteria.toCommand();
-        Page<ProductService.ProductWithBrand> productsWithBrand = productService.getProductListWithBrand(command);
+        Page<ProductService.ProductWithBrandAndStock> productsWithBrandAndStock = productService.getProductListWithBrandAndStock(command);
         
-        // 2. 각 상품을 재고 정보와 함께 응답 형태로 변환
-        return productsWithBrand.map(pwb -> {
-            ProductInfo.Summary domainInfo = ProductInfo.Summary.from(pwb.product(), pwb.getBrandName(), productStockService);
+        return productsWithBrandAndStock.map(item -> {
+            ProductInfo.Summary domainInfo = ProductInfo.Summary.from(item);
             return ProductResult.Summary.from(domainInfo);
         });
     }

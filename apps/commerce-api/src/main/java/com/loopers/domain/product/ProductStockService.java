@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -22,13 +24,6 @@ public class ProductStockService {
     }
     
     @Transactional(readOnly = true)
-    public boolean hasStock(Long productId, Integer quantity) {
-        return productStockJpaRepository.findByProductId(productId)
-            .map(stock -> stock.getStock() >= quantity)
-            .orElse(false);
-    }
-    
-    @Transactional(readOnly = true)
     public Integer getStock(Long productId) {
         return productStockJpaRepository.findByProductId(productId)
             .map(ProductStockEntity::getStock)
@@ -37,7 +32,7 @@ public class ProductStockService {
     
     public void decreaseStock(Long productId, Integer quantity) {
         ProductStockEntity stock = productStockJpaRepository
-            .findByProductIdWithLock(productId)
+            .findByProductIdWithPessimisticLock(productId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "재고를 찾을 수 없습니다"));
         
         stock.decrease(quantity);
@@ -46,10 +41,47 @@ public class ProductStockService {
     
     public void increaseStock(Long productId, Integer quantity) {
         ProductStockEntity stock = productStockJpaRepository
-            .findByProductIdWithLock(productId)
+            .findByProductIdWithPessimisticLock(productId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "재고를 찾을 수 없습니다"));
         
         stock.increase(quantity);
         productStockJpaRepository.save(stock);
+    }
+    
+    @Transactional
+    public void decreaseStockPessimistic(Long productId, Integer quantity) {
+        ProductStockEntity stock = productStockJpaRepository
+            .findByProductIdWithPessimisticLock(productId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "재고를 찾을 수 없습니다"));
+        
+        stock.decrease(quantity);
+        productStockJpaRepository.save(stock);
+    }
+    
+    @Transactional
+    public void decreaseStockOptimistic(Long productId, Integer quantity) {
+        ProductStockEntity stock = productStockJpaRepository
+            .findByProductIdWithOptimisticLock(productId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "재고를 찾을 수 없습니다"));
+        
+        stock.decrease(quantity);
+        productStockJpaRepository.save(stock);
+    }
+    
+    @Transactional
+    public void decreaseStockNoLock(Long productId, Integer quantity) {
+        ProductStockEntity stock = productStockJpaRepository
+            .findByProductId(productId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "재고를 찾을 수 없습니다"));
+        
+        stock.decrease(quantity);
+        productStockJpaRepository.save(stock);
+    }
+
+    
+    @Transactional
+    public void increaseStockBatchForCompensation(Map<Long, Integer> stockUpdates) {
+        stockUpdates.forEach(productStockJpaRepository::increaseStockBatch
+        );
     }
 }

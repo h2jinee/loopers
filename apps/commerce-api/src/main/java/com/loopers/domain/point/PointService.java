@@ -26,7 +26,7 @@ public class PointService {
 		}
 
 		// 2. 기존 포인트 조회 또는 초기 생성
-		PointEntity point = pointJpaRepository.findById(command.userId())
+		PointEntity point = pointJpaRepository.findByUserId(command.userId())
 			.orElseGet(() -> PointEntity.createInitial(command.userId()));
 
 		// 3. 포인트 충전 및 히스토리 생성
@@ -44,7 +44,7 @@ public class PointService {
 	@Transactional
 	public void initializeUserPoint(PointCommand.Initialize command) {
 		// 1. 이미 포인트가 있는지 확인
-		if (pointJpaRepository.findById(command.userId()).isPresent()) {
+		if (pointJpaRepository.findByUserId(command.userId()).isPresent()) {
 			return;
 		}
 
@@ -58,14 +58,14 @@ public class PointService {
 	}
 	
 	private PointEntity getPointEntityByUserId(String userId) {
-		return pointJpaRepository.findById(userId)
+		return pointJpaRepository.findByUserId(userId)
 			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "포인트 정보를 찾을 수 없습니다."));
 	}
 	
 	@Transactional
 	public void usePoint(PointCommand.Use command) {
-		// 1. 사용자 포인트 정보 조회
-		PointEntity point = getPointEntityByUserId(command.userId());
+		// 1. 사용자 포인트 정보 조회 (비관적 락)
+		PointEntity point = getPointEntityByUserIdWithPessimisticLock(command.userId());
 		
 		// 2. 포인트 사용 및 히스토리 생성
 		PointHistoryEntity history = point.use(command.amount(), command.orderId());
@@ -75,5 +75,46 @@ public class PointService {
 		
 		// 4. 포인트 사용 히스토리 저장
 		pointHistoryJpaRepository.save(history);
+	}
+	
+	// 비관적 락 테스트
+	@Transactional
+	public void usePointPessimistic(PointCommand.Use command) {
+		PointEntity point = getPointEntityByUserIdWithPessimisticLock(command.userId());
+		PointHistoryEntity history = point.use(command.amount(), command.orderId());
+		
+		pointJpaRepository.save(point);
+		pointHistoryJpaRepository.save(history);
+	}
+	
+	// 낙관적 락 테스트
+	@Transactional
+	public void usePointOptimistic(PointCommand.Use command) {
+		PointEntity point = getPointEntityByUserIdWithOptimisticLock(command.userId());
+		PointHistoryEntity history = point.use(command.amount(), command.orderId());
+		
+		pointJpaRepository.save(point);
+		pointHistoryJpaRepository.save(history);
+	}
+	
+	// Lock 사용 X (동시성 이슈 테스트)
+	@Transactional
+	public void usePointNoLock(PointCommand.Use command) {
+		PointEntity point = getPointEntityByUserId(command.userId());
+		PointHistoryEntity history = point.use(command.amount(), command.orderId());
+		
+		pointJpaRepository.save(point);
+		pointHistoryJpaRepository.save(history);
+	}
+
+	
+	private PointEntity getPointEntityByUserIdWithPessimisticLock(String userId) {
+		return pointJpaRepository.findByIdWithPessimisticLock(userId)
+			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "포인트 정보를 찾을 수 없습니다."));
+	}
+	
+	private PointEntity getPointEntityByUserIdWithOptimisticLock(String userId) {
+		return pointJpaRepository.findByIdWithOptimisticLock(userId)
+			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "포인트 정보를 찾을 수 없습니다."));
 	}
 }

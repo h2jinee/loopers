@@ -33,7 +33,7 @@ public class UserService {
     
     public UserEntity getUserInfo(UserCommand.GetOne command) {
         // 사용자 ID로 조회, 없으면 예외 발생
-        return userJpaRepository.findById(command.userId())
+        return userJpaRepository.findByUserId(command.userId())
             .orElseThrow(() -> new CoreException(
                 ErrorType.NOT_FOUND, 
                 "존재하지 않는 사용자입니다."

@@ -2,7 +2,6 @@ package com.loopers.domain.order;
 
 import com.loopers.domain.common.Money;
 import com.loopers.domain.product.ProductEntity;
-import com.loopers.domain.product.ProductStockService;
 import com.loopers.infrastructure.order.StockReservationJpaRepository;
 import com.loopers.infrastructure.order.OrderJpaRepository;
 import com.loopers.support.error.CoreException;
@@ -13,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,35 +22,7 @@ public class OrderService {
     
     private final StockReservationJpaRepository stockReservationJpaRepository;
     private final OrderJpaRepository orderJpaRepository;
-    private final ProductStockService productStockService;
-    
-    public OrderCreationResult createOrder(OrderCommand.CreateWithProduct command) {
-        ProductEntity product = command.product();
-        
-        if (!productStockService.isAvailable(product.getId())) {
-            throw new CoreException(ErrorType.CONFLICT, 
-                "구매할 수 없는 상품입니다. 상품명: " + product.getNameKo());
-        }
-        
-        if (!productStockService.hasStock(product.getId(), command.quantity())) {
-            throw new CoreException(ErrorType.CONFLICT, 
-                "재고가 부족합니다. 상품명: " + product.getNameKo());
-        }
-        
-        OrderEntity order = new OrderEntity(command.userId(), command.receiverInfo());
-        
-        Money totalPrice = product.getTotalPrice();
-        OrderLineEntity orderLine = new OrderLineEntity(
-            product.getId(),
-            product.getNameKo(),
-            command.quantity(),
-            totalPrice
-        );
-        order.addOrderLine(orderLine);
-        
-        return new OrderCreationResult(order, command.productId(), command.quantity());
-    }
-    
+
     public OrderCreationResult createOrderWithoutStockCheck(OrderCommand.CreateWithProduct command) {
         ProductEntity product = command.product();
         
@@ -72,22 +44,20 @@ public class OrderService {
         return new StockReservationEntity(orderId, productId, quantity);
     }
     
+    @Transactional
     public void confirmStockReservations(Long orderId) {
         List<StockReservationEntity> reservations = stockReservationJpaRepository.findByOrderId(orderId);
         
-        for (StockReservationEntity reservation : reservations) {
-            reservation.confirm();
-            stockReservationJpaRepository.save(reservation);
-        }
+        reservations.forEach(StockReservationEntity::confirm);
+        stockReservationJpaRepository.saveAll(reservations);
     }
     
+    @Transactional
     public void cancelStockReservations(Long orderId) {
         List<StockReservationEntity> reservations = stockReservationJpaRepository.findByOrderId(orderId);
         
-        for (StockReservationEntity reservation : reservations) {
-            reservation.cancel();
-            stockReservationJpaRepository.save(reservation);
-        }
+        reservations.forEach(StockReservationEntity::cancel);
+        stockReservationJpaRepository.saveAll(reservations);
     }
 
     public OrderEntity saveOrder(OrderEntity order) {

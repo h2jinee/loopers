@@ -1,8 +1,5 @@
 package com.loopers.domain.like;
 
-import java.math.BigDecimal;
-import java.time.ZonedDateTime;
-
 public class LikeInfo {
     
     public record LikeResult(
@@ -13,16 +10,4 @@ public class LikeInfo {
             return new LikeResult(isLiked, likeCount != null ? likeCount : 0L);
         }
     }
-    
-    public record LikedProduct(
-        Long productId,
-        Long brandId,
-        String brandNameKo,
-        String productNameKo,
-        String description,
-        BigDecimal price,
-        Long likeCount,
-        boolean isAvailable,
-        ZonedDateTime likedAt
-    ) {}
 }

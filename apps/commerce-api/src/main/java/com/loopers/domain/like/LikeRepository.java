@@ -5,11 +5,11 @@ import org.springframework.data.domain.Pageable;
 
 public interface LikeRepository {
     
-    Page<LikeEntity> findByUserId(String userId, Pageable pageable);
-    
     void deleteByUserIdAndProductId(String userId, Long productId);
     
     boolean existsByUserIdAndProductId(String userId, Long productId);
     
     Long countByProductId(Long productId);
+    
+    Page<LikedProductDto> findLikedProductsByUserId(String userId, Pageable pageable);
 }

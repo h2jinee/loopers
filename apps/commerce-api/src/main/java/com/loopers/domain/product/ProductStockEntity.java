@@ -7,6 +7,7 @@ import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,9 @@ public class ProductStockEntity extends BaseEntity {
 
 	@Column(name = "stock", nullable = false)
 	private Integer stock;
+
+	@Version
+	private Long version;
 	
 	public ProductStockEntity(Long productId, Integer stock) {
 		this.productId = productId;

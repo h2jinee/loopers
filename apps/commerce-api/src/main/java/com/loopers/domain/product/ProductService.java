@@ -12,11 +12,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class ProductService {
     
     private final ProductJpaRepository productJpaRepository;
+    private final ProductRepository productRepository;
     private final BrandJpaRepository brandJpaRepository;
     private final ProductStockService productStockService;
 
@@ -33,24 +38,21 @@ public class ProductService {
         Pageable pageable = createPageable(command);
         
         if (command.brandId() != null) {
-            return productJpaRepository.findByBrandIdWithLikeCount(command.brandId(), pageable);
+            return productRepository.findByBrandIdWithLikeCount(command.brandId(), pageable);
         }
         
-        return productJpaRepository.findAllWithLikeCount(pageable);
+        return productRepository.findAllWithLikeCount(pageable);
     }
     
     public void decreaseStock(ProductCommand.DecreaseStock command) {
-        // 1. 재고 구매 가능 여부 확인
         if (!productStockService.isAvailable(command.productId())) {
             throw new CoreException(ErrorType.CONFLICT, "구매할 수 없는 상품입니다.");
         }
         
-        // 2. 재고 차감 처리
         productStockService.decreaseStock(command.productId(), command.quantity());
     }
     
     public void increaseStock(ProductCommand.IncreaseStock command) {
-        // 재고 증가 처리
         productStockService.increaseStock(command.productId(), command.quantity());
     }
 
@@ -65,25 +67,71 @@ public class ProductService {
     }
 
     public ProductWithBrand getProductWithBrand(ProductCommand.GetOne command) {
-        // 1. 상품 정보 조회
         ProductEntity product = getProductById(command.productId());
         
-        // 2. 해당 상품의 브랜드 정보 조회
         BrandEntity brand = brandJpaRepository.findById(product.getBrandId())
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "브랜드를 찾을 수 없습니다."));
         
-        // 3. 상품과 브랜드 정보 결합
         return new ProductWithBrand(product, brand);
     }
     
-    public Page<ProductWithBrand> getProductListWithBrand(ProductCommand.GetList command) {
-        // 1. 상품 목록 조회
-        Page<ProductEntity> products = getProductList(command);
+    public Page<ProductWithBrandAndStock> getProductListWithBrandAndStock(ProductCommand.GetList command) {
+        Pageable pageable = createPageable(command);
         
-        // 2. 각 상품에 대해 브랜드 정보를 결합
-        return products.map(product -> {
-            BrandEntity brand = brandJpaRepository.findById(product.getBrandId())
-                .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "브랜드를 찾을 수 없습니다."));
+        Page<ProductWithBrandDto> productsWithBrand = command.brandId() != null
+            ? productRepository.findProductsWithBrandByBrandId(command.brandId(), pageable)
+            : productRepository.findAllProductsWithBrand(pageable);
+        
+        if (productsWithBrand.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        
+        List<Long> productIds = productsWithBrand.getContent().stream()
+            .map(ProductWithBrandDto::productId)
+            .collect(Collectors.toList());
+        
+        Map<Long, ProductStockInfo> stockInfoMap = productRepository.findProductStockInfoByIds(productIds)
+            .stream()
+            .collect(Collectors.toMap(
+                ProductStockInfo::productId,
+                info -> info,
+                (existing, replacement) -> existing
+            ));
+        
+        return productsWithBrand.map(dto -> new ProductWithBrandAndStock(
+            dto,
+            stockInfoMap.getOrDefault(dto.productId(), new ProductStockInfo(dto.productId(), 0, false))
+        ));
+    }
+    
+    public Page<ProductWithBrand> getProductListWithBrand(ProductCommand.GetList command) {
+        Page<ProductWithBrandAndStock> productsWithBrandAndStock = getProductListWithBrandAndStock(command);
+        
+        List<Long> productIds = productsWithBrandAndStock.getContent().stream()
+            .map(item -> item.productWithBrand().productId())
+            .collect(Collectors.toList());
+        
+        Map<Long, ProductEntity> productMap = productJpaRepository.findAllByIdIn(productIds)
+            .stream()
+            .collect(Collectors.toMap(ProductEntity::getId, p -> p));
+        
+        List<Long> brandIds = productsWithBrandAndStock.getContent().stream()
+            .map(item -> item.productWithBrand().brandId())
+            .distinct()
+            .collect(Collectors.toList());
+        
+        Map<Long, BrandEntity> brandMap = brandJpaRepository.findAllById(brandIds)
+            .stream()
+            .collect(Collectors.toMap(BrandEntity::getId, b -> b));
+        
+        return productsWithBrandAndStock.map(item -> {
+            ProductEntity product = productMap.get(item.productWithBrand().productId());
+            BrandEntity brand = brandMap.get(item.productWithBrand().brandId());
+            
+            if (product != null) {
+                product.setLikeCount(item.productWithBrand().likeCount());
+            }
+            
             return new ProductWithBrand(product, brand);
         });
     }
@@ -96,4 +144,9 @@ public class ProductService {
             return brand.getNameKo();
         }
     }
+    
+    public record ProductWithBrandAndStock(
+        ProductWithBrandDto productWithBrand,
+        ProductStockInfo stockInfo
+    ) {}
 }

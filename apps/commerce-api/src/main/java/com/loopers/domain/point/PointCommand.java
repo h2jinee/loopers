@@ -34,6 +34,7 @@ public class PointCommand {
             }
         }
     }
+
     
     public record GetOne(
         String userId

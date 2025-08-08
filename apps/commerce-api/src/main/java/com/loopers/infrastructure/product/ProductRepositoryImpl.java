@@ -1,16 +1,15 @@
 package com.loopers.infrastructure.product;
 
-import com.loopers.domain.product.ProductEntity;
-import com.loopers.domain.product.ProductRepository;
-import com.loopers.infrastructure.product.ProductCountJpaRepository;
-import com.loopers.domain.product.ProductCountEntity;
+import com.loopers.domain.product.*;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Component
 @RequiredArgsConstructor
 public class ProductRepositoryImpl implements ProductRepository {
 
@@ -19,29 +18,24 @@ public class ProductRepositoryImpl implements ProductRepository {
 
     @Override
     public Page<ProductEntity> findAllWithLikeCount(Pageable pageable) {
-        // 1. 상품 목록 조회
         Page<ProductEntity> products = productJpaRepository.findAll(pageable);
         
-        // 빈 페이지면 그대로 반환
         if (products.isEmpty()) {
             return products;
         }
         
-        // 2. 상품 ID 목록 추출
         List<Long> productIds = products.getContent().stream()
             .map(ProductEntity::getId)
             .collect(Collectors.toList());
         
-        // 3. 좋아요 수 조회
         Map<Long, Long> likeCountMap = productCountRepository.findByProductIdIn(productIds)
             .stream()
             .collect(Collectors.toMap(
                 ProductCountEntity::getProductId,
                 ProductCountEntity::getLikeCount,
-                (existing, replacement) -> existing  // 중복 키 처리
+                (existing, replacement) -> existing
             ));
         
-        // 4. 메모리에서 좋아요 수 매핑
         products.getContent().forEach(product -> 
             product.setLikeCount(likeCountMap.getOrDefault(product.getId(), 0L))
         );
@@ -51,33 +45,46 @@ public class ProductRepositoryImpl implements ProductRepository {
     
     @Override
     public Page<ProductEntity> findByBrandIdWithLikeCount(Long brandId, Pageable pageable) {
-        // 1. 브랜드별 상품 목록 조회
         Page<ProductEntity> products = productJpaRepository.findByBrandId(brandId, pageable);
         
-        // 빈 페이지면 그대로 반환
         if (products.isEmpty()) {
             return products;
         }
 
-        // 2. 상품 ID 목록 추출
         List<Long> productIds = products.getContent().stream()
             .map(ProductEntity::getId)
             .collect(Collectors.toList());
         
-        // 3. 좋아요 수 조회
         Map<Long, Long> likeCountMap = productCountRepository.findByProductIdIn(productIds)
             .stream()
             .collect(Collectors.toMap(
                 ProductCountEntity::getProductId,
                 ProductCountEntity::getLikeCount,
-                (existing, replacement) -> existing  // 중복 키 처리
+                (existing, replacement) -> existing
             ));
         
-        // 4. 메모리에서 좋아요 수 매핑
         products.getContent().forEach(product -> 
             product.setLikeCount(likeCountMap.getOrDefault(product.getId(), 0L))
         );
         
         return products;
+    }
+    
+    @Override
+    public Page<ProductWithBrandDto> findAllProductsWithBrand(Pageable pageable) {
+        return productJpaRepository.findAllProductsWithBrand(pageable);
+    }
+    
+    @Override
+    public Page<ProductWithBrandDto> findProductsWithBrandByBrandId(Long brandId, Pageable pageable) {
+        return productJpaRepository.findProductsWithBrandByBrandId(brandId, pageable);
+    }
+    
+    @Override
+    public List<ProductStockInfo> findProductStockInfoByIds(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return productJpaRepository.findProductStockInfoByIds(productIds);
     }
 }
