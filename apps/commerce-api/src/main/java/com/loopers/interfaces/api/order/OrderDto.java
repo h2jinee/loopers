@@ -1,6 +1,6 @@
 package com.loopers.interfaces.api.order;
 
-import com.loopers.application.order.OrderInfo;
+import com.loopers.application.order.OrderResult;
 import com.loopers.domain.order.vo.OrderStatus;
 import com.loopers.domain.order.vo.ReceiverInfo;
 import jakarta.validation.constraints.*;
@@ -54,7 +54,7 @@ public class OrderDto {
                 OrderStatus status,
                 ZonedDateTime paymentDeadline
             ) {
-                public static Response from(OrderInfo.CreateResult result) {
+                public static Response from(OrderResult.CreateResult result) {
                     return new Response(
                         result.orderId(),
                         result.totalAmount(),
@@ -76,7 +76,7 @@ public class OrderDto {
                 ZonedDateTime paymentDeadline,
                 ZonedDateTime orderedAt
             ) {
-                public static Response from(OrderInfo.Detail detail) {
+                public static Response from(OrderResult.Detail detail) {
                     List<OrderLineResponse> lines = detail.orderLines().stream()
                         .map(OrderLineResponse::from)
                         .collect(Collectors.toList());
@@ -120,7 +120,7 @@ public class OrderDto {
                 BigDecimal price,
                 BigDecimal subtotal
             ) {
-                public static OrderLineResponse from(OrderInfo.OrderLineInfo line) {
+                public static OrderLineResponse from(OrderResult.OrderLineResult line) {
                     return new OrderLineResponse(
                         line.orderLineId(),
                         line.productId(),
@@ -142,7 +142,7 @@ public class OrderDto {
                 String firstItemName,
                 ZonedDateTime orderedAt
             ) {
-                public static Response from(OrderInfo.Summary summary) {
+                public static Response from(OrderResult.Summary summary) {
                     return new Response(
                         summary.orderId(),
                         summary.totalAmount(),

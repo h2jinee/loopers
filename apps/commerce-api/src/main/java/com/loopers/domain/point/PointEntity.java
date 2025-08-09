@@ -9,8 +9,8 @@ import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,12 +22,14 @@ import java.math.BigDecimal;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "points")
 public class PointEntity extends BaseEntity {
-	@Id
-	@Column(name = "user_id")
+	@Column(name = "user_id", unique = true, nullable = false)
 	private String userId;
 	
 	@Column(nullable = false)
 	private BigDecimal balance;
+
+	@Version
+	private Long version;
 
 	public PointEntity(String userId, Money initialBalance) {
 		this.userId = userId;

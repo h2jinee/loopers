@@ -59,17 +59,17 @@ public class ProductCountEntityTest {
     @DisplayName("좋아요 수 업데이트 시")
     @Nested
     class UpdateLikeCount {
-        @DisplayName("좋아요 수를 업데이트할 수 있다.")
-        @Test
-        void updateLikeCount_successfully() {
-            // arrange
-            ProductCountEntity productCount = new ProductCountEntity(1L);
+		@DisplayName("좋아요 수를 업데이트할 수 있다.")
+		@Test
+		void updateLikeCount_successfully() {
+			// arrange
+			ProductCountEntity productCount = new ProductCountEntity(1L);
 
-            // act
-            productCount.updateLikeCount(10L);
+			// act
+			productCount.updateLikeCount(10L);
 
-            // assert
-            assertThat(productCount.getLikeCount()).isEqualTo(10L);
-        }
-    }
+			// assert
+			assertThat(productCount.getLikeCount()).isEqualTo(10L);
+		}
+	}
 }

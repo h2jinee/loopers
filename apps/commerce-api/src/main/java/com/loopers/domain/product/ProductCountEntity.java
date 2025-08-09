@@ -27,6 +27,9 @@ public class ProductCountEntity extends BaseEntity {
     @Column(name = "last_updated_at", nullable = false)
     private ZonedDateTime lastUpdatedAt;
     
+    @Version
+    private Long version;
+    
     public ProductCountEntity(Long productId) {
         this.productId = productId;
         this.likeCount = 0L;
@@ -36,6 +39,18 @@ public class ProductCountEntity extends BaseEntity {
     
     public void updateLikeCount(Long count) {
         this.likeCount = count != null ? count : 0L;
+        this.lastUpdatedAt = ZonedDateTime.now();
+    }
+    
+    public void incrementLikeCount() {
+        this.likeCount++;
+        this.lastUpdatedAt = ZonedDateTime.now();
+    }
+    
+    public void decrementLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
         this.lastUpdatedAt = ZonedDateTime.now();
     }
 }

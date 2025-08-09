@@ -1,7 +1,8 @@
 package com.loopers.interfaces.api.like;
 
-import com.loopers.application.like.LikeApplicationService;
-import com.loopers.application.like.LikeInfo;
+import com.loopers.application.like.LikeCriteria;
+import com.loopers.application.like.LikeFacade;
+import com.loopers.application.like.LikeResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/like/products")
 public class LikeV1Controller implements LikeV1ApiSpec {
     
-    private final LikeApplicationService likeApplicationService;
+    private final LikeFacade likeFacade;
     
     @PostMapping("/{productId}")
     @Override
@@ -23,7 +24,8 @@ public class LikeV1Controller implements LikeV1ApiSpec {
         @PathVariable Long productId
     ) {
         validateUserId(userId);
-        LikeInfo.Result result = likeApplicationService.addLike(userId, productId);
+        LikeCriteria.AddLike criteria = new LikeCriteria.AddLike(userId, productId);
+        LikeResult.LikeToggleResult result = likeFacade.addLike(criteria);
         return ApiResponse.success(LikeDto.V1.ToggleLike.Response.from(result));
     }
     
@@ -34,7 +36,8 @@ public class LikeV1Controller implements LikeV1ApiSpec {
         @PathVariable Long productId
     ) {
         validateUserId(userId);
-        LikeInfo.Result result = likeApplicationService.removeLike(userId, productId);
+        LikeCriteria.RemoveLike criteria = new LikeCriteria.RemoveLike(userId, productId);
+        LikeResult.LikeToggleResult result = likeFacade.removeLike(criteria);
         return ApiResponse.success(LikeDto.V1.ToggleLike.Response.from(result));
     }
     
@@ -46,7 +49,8 @@ public class LikeV1Controller implements LikeV1ApiSpec {
         @RequestParam(required = false, defaultValue = "20") Integer size
     ) {
         validateUserId(userId);
-        Page<LikeInfo.LikedProduct> likedProducts = likeApplicationService.getLikedProducts(userId, page, size);
+        LikeCriteria.GetLikedProducts criteria = new LikeCriteria.GetLikedProducts(userId, page, size);
+        Page<LikeResult.LikedProduct> likedProducts = likeFacade.getLikedProducts(criteria);
         Page<LikeDto.V1.GetLikedProducts.Response> response = likedProducts.map(LikeDto.V1.GetLikedProducts.Response::from);
         return ApiResponse.success(response);
     }

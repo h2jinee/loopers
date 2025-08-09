@@ -7,10 +7,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.loopers.domain.point.vo.ChargePoint;
-import com.loopers.domain.point.PointCommand;
-import com.loopers.domain.point.PointEntity;
-import com.loopers.domain.point.PointDomainService;
+import com.loopers.application.point.PointCriteria;
+import com.loopers.application.point.PointFacade;
+import com.loopers.application.point.PointResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -25,25 +24,17 @@ public class PointV1ApiController implements PointV1ApiSpec {
 
     private static final String USER_ID_HEADER = "X-USER-ID";
 
-    private final PointDomainService pointDomainService;
+    private final PointFacade pointFacade;
 
     @PostMapping("/charge")
     @Override
     public ApiResponse<PointDto.V1.Charge.Response> chargeUserPoint(
         @RequestBody @Valid PointDto.V1.Charge.Request request
     ) {
-        PointCommand.Charge command = new PointCommand.Charge(
-            request.userId(),
-            new ChargePoint(request.amount())
-        );
+        PointCriteria.Charge criteria = new PointCriteria.Charge(request.userId(), request.amount());
+        PointResult.ChargeResult result = pointFacade.chargeUserPoint(criteria);
 
-        PointEntity charged = pointDomainService.charge(command);
-
-        PointDto.V1.Charge.Response response = new PointDto.V1.Charge.Response(
-            charged.getUserId(),
-            charged.getBalance().amount().longValue()
-        );
-
+        PointDto.V1.Charge.Response response = PointDto.V1.Charge.Response.from(result);
         return ApiResponse.success(response);
     }
 
@@ -56,14 +47,10 @@ public class PointV1ApiController implements PointV1ApiSpec {
             throw new CoreException(ErrorType.BAD_REQUEST, USER_ID_HEADER + " 헤더가 없습니다.");
         }
 
-        PointCommand.GetOne command = new PointCommand.GetOne(userId);
-        PointEntity point = pointDomainService.getPointEntity(command);
+        PointCriteria.GetDetail criteria = new PointCriteria.GetDetail(userId);
+        PointResult.Detail result = pointFacade.getUserPoint(criteria);
 
-        PointDto.V1.GetPoint.Response response = new PointDto.V1.GetPoint.Response(
-            userId,
-            point.getBalance().amount().longValue()
-        );
-
+        PointDto.V1.GetPoint.Response response = PointDto.V1.GetPoint.Response.from(result);
         return ApiResponse.success(response);
     }
 }

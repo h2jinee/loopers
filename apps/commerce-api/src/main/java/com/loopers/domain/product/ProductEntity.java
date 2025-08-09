@@ -30,9 +30,6 @@ public class ProductEntity extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
     
-    @Column(nullable = false)
-    private Integer stock;
-    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProductStatus status;
@@ -51,7 +48,6 @@ public class ProductEntity extends BaseEntity {
         String nameKo,
         Money price,
         String description,
-        Stock stock,
         ProductStatus status,
         Integer releaseYear,
         Money shippingFee
@@ -60,40 +56,11 @@ public class ProductEntity extends BaseEntity {
         this.nameKo = nameKo;
         this.price = price.amount();
         this.description = description;
-        this.stock = stock.value();
         this.status = status;
         this.releaseYear = releaseYear;
         this.shippingFee = shippingFee.amount();
     }
-    
-    public boolean isAvailable() {
-        return status == ProductStatus.AVAILABLE && stock > 0;
-    }
-    
-    public boolean hasStock(Integer quantity) {
-        return new Stock(stock).hasStock(quantity);
-    }
-    
-    public void decreaseStock(Integer quantity) {
-        Stock currentStock = new Stock(stock);
-        Stock newStock = currentStock.decrease(quantity);
-        this.stock = newStock.value();
-        
-        if (this.stock == 0) {
-            this.status = ProductStatus.OUT_OF_STOCK;
-        }
-    }
-    
-    public void increaseStock(Integer quantity) {
-        Stock currentStock = new Stock(stock);
-        Stock newStock = currentStock.increase(quantity);
-        this.stock = newStock.value();
-        
-        if (this.status == ProductStatus.OUT_OF_STOCK && this.stock > 0) {
-            this.status = ProductStatus.AVAILABLE;
-        }
-    }
-    
+
     public Money getPrice() {
         return Money.of(price);
     }

@@ -1,6 +1,6 @@
 package com.loopers.interfaces.api.like;
 
-import com.loopers.application.like.LikeInfo;
+import com.loopers.application.like.LikeResult;
 
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
@@ -14,7 +14,7 @@ public class LikeDto {
                 boolean isLiked,
                 Long likeCount
             ) {
-                public static Response from(LikeInfo.Result result) {
+                public static Response from(LikeResult.LikeToggleResult result) {
                     return new Response(
                         result.isLiked(),
                         result.likeCount()
@@ -35,7 +35,7 @@ public class LikeDto {
                 boolean isAvailable,
                 ZonedDateTime likedAt
             ) {
-                public static Response from(LikeInfo.LikedProduct product) {
+                public static Response from(LikeResult.LikedProduct product) {
                     return new Response(
                         product.productId(),
                         product.brandId(),

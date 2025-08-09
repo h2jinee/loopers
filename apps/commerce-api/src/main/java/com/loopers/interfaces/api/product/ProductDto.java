@@ -1,6 +1,6 @@
 package com.loopers.interfaces.api.product;
 
-import com.loopers.application.product.ProductInfo;
+import com.loopers.application.product.ProductResult;
 import com.loopers.domain.product.vo.ProductStatus;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -38,7 +38,7 @@ public class ProductDto {
                 Long likeCount,
                 boolean isAvailable
             ) {
-                public static Response from(ProductInfo.Summary summary) {
+                public static Response from(ProductResult.Summary summary) {
                     return new Response(
                         summary.productId(),
                         summary.brandId(),
@@ -69,7 +69,7 @@ public class ProductDto {
                 Long likeCount,
                 boolean isAvailable
             ) {
-                public static Response from(ProductInfo.Detail detail) {
+                public static Response from(ProductResult.Detail detail) {
                     return new Response(
                         detail.productId(),
                         detail.brandId(),
