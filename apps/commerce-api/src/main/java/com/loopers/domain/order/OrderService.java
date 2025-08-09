@@ -2,8 +2,6 @@ package com.loopers.domain.order;
 
 import com.loopers.domain.common.Money;
 import com.loopers.domain.product.ProductEntity;
-import com.loopers.infrastructure.order.StockReservationJpaRepository;
-import com.loopers.infrastructure.order.OrderJpaRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +18,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderService {
     
-    private final StockReservationJpaRepository stockReservationJpaRepository;
-    private final OrderJpaRepository orderJpaRepository;
+    private final StockReservationRepository stockReservationRepository;
+    private final OrderRepository orderRepository;
 
     public OrderCreationResult createOrderWithoutStockCheck(OrderCommand.CreateWithProduct command) {
         ProductEntity product = command.product();
@@ -45,27 +43,36 @@ public class OrderService {
     }
     
     @Transactional
+    public StockReservationEntity saveStockReservation(StockReservationEntity reservation) {
+        return stockReservationRepository.save(reservation);
+    }
+    
+    public List<StockReservationEntity> findStockReservationsByOrderId(Long orderId) {
+        return stockReservationRepository.findByOrderId(orderId);
+    }
+    
+    @Transactional
     public void confirmStockReservations(Long orderId) {
-        List<StockReservationEntity> reservations = stockReservationJpaRepository.findByOrderId(orderId);
+        List<StockReservationEntity> reservations = stockReservationRepository.findByOrderId(orderId);
         
         reservations.forEach(StockReservationEntity::confirm);
-        stockReservationJpaRepository.saveAll(reservations);
+        stockReservationRepository.saveAll(reservations);
     }
     
     @Transactional
     public void cancelStockReservations(Long orderId) {
-        List<StockReservationEntity> reservations = stockReservationJpaRepository.findByOrderId(orderId);
+        List<StockReservationEntity> reservations = stockReservationRepository.findByOrderId(orderId);
         
         reservations.forEach(StockReservationEntity::cancel);
-        stockReservationJpaRepository.saveAll(reservations);
+        stockReservationRepository.saveAll(reservations);
     }
 
     public OrderEntity saveOrder(OrderEntity order) {
-        return orderJpaRepository.save(order);
+        return orderRepository.save(order);
     }
 
     public OrderEntity getUserOrder(OrderCommand.GetDetail command) {
-        return orderJpaRepository.findByIdAndUserId(command.orderId(), command.userId())
+        return orderRepository.findByIdAndUserId(command.orderId(), command.userId())
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "주문을 찾을 수 없습니다."));
     }
     
@@ -76,11 +83,11 @@ public class OrderService {
             Sort.by(Sort.Direction.DESC, "createdAt")
         );
         
-        return orderJpaRepository.findByUserId(command.userId(), pageable);
+        return orderRepository.findByUserId(command.userId(), pageable);
     }
     
     public void updateOrder(OrderEntity order) {
-        orderJpaRepository.save(order);
+        orderRepository.save(order);
     }
     
     public record OrderCreationResult(

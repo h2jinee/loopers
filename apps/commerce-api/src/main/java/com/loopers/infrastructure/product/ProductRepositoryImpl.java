@@ -14,60 +14,37 @@ import java.util.stream.Collectors;
 public class ProductRepositoryImpl implements ProductRepository {
 
     private final ProductJpaRepository productJpaRepository;
-    private final ProductCountJpaRepository productCountRepository;
+    
+    @Override
+    public Optional<ProductEntity> findById(Long productId) {
+        return productJpaRepository.findById(productId);
+    }
+    
+    @Override
+    public List<ProductEntity> findAllByIdIn(List<Long> productIds) {
+        return productJpaRepository.findAllByIdIn(productIds);
+    }
 
     @Override
     public Page<ProductEntity> findAllWithLikeCount(Pageable pageable) {
-        Page<ProductEntity> products = productJpaRepository.findAll(pageable);
+        Page<ProductWithLikeCountDto> results = productJpaRepository.findAllWithLikeCountOptimized(pageable);
         
-        if (products.isEmpty()) {
-            return products;
-        }
-        
-        List<Long> productIds = products.getContent().stream()
-            .map(ProductEntity::getId)
+        List<ProductEntity> products = results.getContent().stream()
+            .map(ProductWithLikeCountDto::product)
             .collect(Collectors.toList());
         
-        Map<Long, Long> likeCountMap = productCountRepository.findByProductIdIn(productIds)
-            .stream()
-            .collect(Collectors.toMap(
-                ProductCountEntity::getProductId,
-                ProductCountEntity::getLikeCount,
-                (existing, replacement) -> existing
-            ));
-        
-        products.getContent().forEach(product -> 
-            product.setLikeCount(likeCountMap.getOrDefault(product.getId(), 0L))
-        );
-        
-        return products;
+        return new PageImpl<>(products, pageable, results.getTotalElements());
     }
     
     @Override
     public Page<ProductEntity> findByBrandIdWithLikeCount(Long brandId, Pageable pageable) {
-        Page<ProductEntity> products = productJpaRepository.findByBrandId(brandId, pageable);
+        Page<ProductWithLikeCountDto> results = productJpaRepository.findByBrandIdWithLikeCountOptimized(brandId, pageable);
         
-        if (products.isEmpty()) {
-            return products;
-        }
-
-        List<Long> productIds = products.getContent().stream()
-            .map(ProductEntity::getId)
+        List<ProductEntity> products = results.getContent().stream()
+            .map(ProductWithLikeCountDto::product)
             .collect(Collectors.toList());
         
-        Map<Long, Long> likeCountMap = productCountRepository.findByProductIdIn(productIds)
-            .stream()
-            .collect(Collectors.toMap(
-                ProductCountEntity::getProductId,
-                ProductCountEntity::getLikeCount,
-                (existing, replacement) -> existing
-            ));
-        
-        products.getContent().forEach(product -> 
-            product.setLikeCount(likeCountMap.getOrDefault(product.getId(), 0L))
-        );
-        
-        return products;
+        return new PageImpl<>(products, pageable, results.getTotalElements());
     }
     
     @Override

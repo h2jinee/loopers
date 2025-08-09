@@ -12,7 +12,6 @@ dependencies {
     
     // retry
     implementation("org.springframework.retry:spring-retry")
-    implementation("org.springframework:spring-aspects")
 
     // querydsl
     implementation("com.querydsl:querydsl-jpa::jakarta")

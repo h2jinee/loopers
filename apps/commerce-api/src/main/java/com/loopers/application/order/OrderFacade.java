@@ -1,7 +1,6 @@
 package com.loopers.application.order;
 
 import com.loopers.domain.order.*;
-import com.loopers.infrastructure.order.StockReservationJpaRepository;
 import com.loopers.domain.payment.PaymentCommand;
 import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.product.ProductCommand;
@@ -37,7 +36,6 @@ public class OrderFacade {
     private final ProductStockService productStockService;
     private final PaymentService paymentService;
     private final PointService pointService;
-    private final StockReservationJpaRepository stockReservationJpaRepository;
     
     @Transactional
     public OrderResult.CreateResult createOrder(OrderCriteria.Create criteria) {
@@ -64,7 +62,7 @@ public class OrderFacade {
             StockReservationEntity reservation = orderService.createStockReservation(
                 orderId, creationResult.productId(), creationResult.quantity()
             );
-            stockReservationJpaRepository.save(reservation);
+            orderService.saveStockReservation(reservation);
             
             try {
                 PointCommand.GetOne getPointCommand = new PointCommand.GetOne(command.userId());
@@ -92,7 +90,7 @@ public class OrderFacade {
                 
                 orderService.cancelStockReservations(orderId);
                 
-                for (StockReservationEntity stockReservation : stockReservationJpaRepository.findByOrderId(orderId)) {
+                for (StockReservationEntity stockReservation : orderService.findStockReservationsByOrderId(orderId)) {
                     if (stockReservation.getStatus() == StockReservationEntity.ReservationStatus.RESERVED) {
                         ProductCommand.IncreaseStock increaseCommand = new ProductCommand.IncreaseStock(
                             stockReservation.getProductId(), stockReservation.getQuantity()
@@ -142,7 +140,7 @@ public class OrderFacade {
             StockReservationEntity reservation = orderService.createStockReservation(
                 orderId, creationResult.productId(), creationResult.quantity()
             );
-            stockReservationJpaRepository.save(reservation);
+            orderService.saveStockReservation(reservation);
             
             try {
                 // 포인트 조회
@@ -171,7 +169,7 @@ public class OrderFacade {
                 orderService.updateOrder(order);
                 orderService.cancelStockReservations(orderId);
                 
-                List<StockReservationEntity> reservedStocks = stockReservationJpaRepository.findByOrderId(orderId)
+                List<StockReservationEntity> reservedStocks = orderService.findStockReservationsByOrderId(orderId)
                     .stream()
                     .filter(sr -> sr.getStatus() == StockReservationEntity.ReservationStatus.RESERVED)
                     .toList();
@@ -183,7 +181,7 @@ public class OrderFacade {
                             StockReservationEntity::getQuantity,
                             Integer::sum
                         ));
-                    productStockService.increaseStockBatchForCompensation(stockUpdates);
+                    productStockService.restoreStocks(stockUpdates);
                 }
                 
                 throw e;
@@ -236,7 +234,7 @@ public class OrderFacade {
             StockReservationEntity reservation = orderService.createStockReservation(
                 orderId, creationResult.productId(), creationResult.quantity()
             );
-            stockReservationJpaRepository.save(reservation);
+            orderService.saveStockReservation(reservation);
             
             try {
                 // 포인트 조회 먼저 하고
@@ -265,7 +263,7 @@ public class OrderFacade {
                 orderService.updateOrder(order);
                 orderService.cancelStockReservations(orderId);
                 
-                List<StockReservationEntity> reservedStocks = stockReservationJpaRepository.findByOrderId(orderId)
+                List<StockReservationEntity> reservedStocks = orderService.findStockReservationsByOrderId(orderId)
                     .stream()
                     .filter(sr -> sr.getStatus() == StockReservationEntity.ReservationStatus.RESERVED)
                     .toList();
@@ -277,7 +275,7 @@ public class OrderFacade {
                             StockReservationEntity::getQuantity,
                             Integer::sum
                         ));
-                    productStockService.increaseStockBatchForCompensation(stockUpdates);
+                    productStockService.restoreStocks(stockUpdates);
                 }
                 
                 throw e;
@@ -326,7 +324,7 @@ public class OrderFacade {
             StockReservationEntity reservation = orderService.createStockReservation(
                 orderId, creationResult.productId(), creationResult.quantity()
             );
-            stockReservationJpaRepository.save(reservation);
+            orderService.saveStockReservation(reservation);
             
             try {
                 // 포인트 조회 먼저 하고
@@ -355,7 +353,7 @@ public class OrderFacade {
                 orderService.updateOrder(order);
                 orderService.cancelStockReservations(orderId);
                 
-                List<StockReservationEntity> reservedStocks = stockReservationJpaRepository.findByOrderId(orderId)
+                List<StockReservationEntity> reservedStocks = orderService.findStockReservationsByOrderId(orderId)
                     .stream()
                     .filter(sr -> sr.getStatus() == StockReservationEntity.ReservationStatus.RESERVED)
                     .toList();
@@ -367,7 +365,7 @@ public class OrderFacade {
                             StockReservationEntity::getQuantity,
                             Integer::sum
                         ));
-                    productStockService.increaseStockBatchForCompensation(stockUpdates);
+                    productStockService.restoreStocks(stockUpdates);
                 }
                 
                 throw e;

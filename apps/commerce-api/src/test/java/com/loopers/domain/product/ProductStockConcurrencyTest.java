@@ -14,6 +14,9 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @SpringBootTest
 class ProductStockConcurrencyTest {
 
@@ -24,39 +27,33 @@ class ProductStockConcurrencyTest {
     private ProductStockJpaRepository productStockRepository;
 
     private Long productId;
-    private static final int INITIAL_STOCK = 100;
-    private static final int THREAD_COUNT = 100;
-    private static final int DECREASE_AMOUNT = 1;
 
     @BeforeEach
     void setUp() {
-        // 기존 데이터 정리
-        productStockRepository.deleteAll();
-        
         // 동적으로 product_id 생성
         productId = System.currentTimeMillis() % 100000;
         
-        ProductStockEntity productStock = new ProductStockEntity(productId, INITIAL_STOCK);
+        int initialStock = 100;
+        ProductStockEntity productStock = new ProductStockEntity(productId, initialStock);
         ProductStockEntity saved = productStockRepository.save(productStock);
         productId = saved.getProductId();
-    }
-
-    @AfterEach
-    void tearDown() {
-        productStockRepository.deleteAll();
     }
 
     @Test
     @DisplayName("비관적 락 - 100개 스레드가 동시에 재고 차감 시 정상 처리")
     void pessimisticLock() throws InterruptedException {
+        int initialStock = 100;
+        int threadCount = 100;
+        int decreaseAmount = 1;
+        
         List<Runnable> tasks = new ArrayList<>();
 
-        for (int i = 0; i < THREAD_COUNT; i++) {
+        for (int i = 0; i < threadCount; i++) {
             tasks.add(() -> {
                 try {
-                    productStockService.decreaseStockPessimistic(productId, DECREASE_AMOUNT);
+                    productStockService.decreaseStockPessimistic(productId, decreaseAmount);
                 } catch (Exception e) {
-                    System.out.println("비관적 락 실패: " + e.getMessage());
+                    log.error("비관적 락 실패: {}", e.getMessage());
                 }
             });
         }
@@ -65,22 +62,25 @@ class ProductStockConcurrencyTest {
 
         ProductStockEntity result = productStockRepository.findByProductId(productId).orElse(null);
         assertThat(result).isNotNull();
-        assertThat(result.getStock()).isEqualTo(INITIAL_STOCK - (THREAD_COUNT * DECREASE_AMOUNT));
+        assertThat(result.getStock()).isEqualTo(initialStock - (threadCount * decreaseAmount));
 
-        System.out.println("비관적 락 결과: " + result.getStock());
+        log.info("비관적 락 결과: {}", result.getStock());
     }
 
     @Test
     @DisplayName("낙관적 락 - 100개 스레드가 동시에 재고 차감 시 정상 처리")
     void optimisticLock() throws InterruptedException {
+        int threadCount = 100;
+        int decreaseAmount = 1;
+        
         List<Runnable> tasks = new ArrayList<>();
 
-        for (int i = 0; i < THREAD_COUNT; i++) {
+        for (int i = 0; i < threadCount; i++) {
             tasks.add(() -> {
                 try {
-                    productStockService.decreaseStockOptimistic(productId, DECREASE_AMOUNT);
+                    productStockService.decreaseStockOptimistic(productId, decreaseAmount);
                 } catch (Exception e) {
-                    System.out.println("낙관적 락 재시도 또는 실패: " + e.getMessage());
+                    log.error("낙관적 락 재시도 또는 실패: {}", e.getMessage());
                 }
             });
         }
@@ -89,20 +89,24 @@ class ProductStockConcurrencyTest {
 
         ProductStockEntity result = productStockRepository.findByProductId(productId).orElse(null);
         assertThat(result).isNotNull();
-        System.out.println("낙관적 락 결과: " + result.getStock());
+        log.info("낙관적 락 결과: {}", result.getStock());
     }
 
     @Test
     @DisplayName("락 없음 - 100개 스레드가 동시에 재고 차감 시 Lost Update 문제 발생")
     void noLock() throws InterruptedException {
+        int initialStock = 100;
+        int threadCount = 100;
+        int decreaseAmount = 1;
+        
         List<Runnable> tasks = new ArrayList<>();
 
-        for (int i = 0; i < THREAD_COUNT; i++) {
+        for (int i = 0; i < threadCount; i++) {
             tasks.add(() -> {
                 try {
-                    productStockService.decreaseStockNoLock(productId, DECREASE_AMOUNT);
+                    productStockService.decreaseStockNoLock(productId, decreaseAmount);
                 } catch (Exception e) {
-                    System.out.println("락 없음 실패: " + e.getMessage());
+                    log.error("락 없음 실패: {}", e.getMessage());
                 }
             });
         }
@@ -111,8 +115,8 @@ class ProductStockConcurrencyTest {
 
         ProductStockEntity result = productStockRepository.findByProductId(productId).orElse(null);
         assertThat(result).isNotNull();
-        System.out.println("락 없음 결과 (Lost Update 확인): " + result.getStock());
+        log.info("락 없음 결과 (Lost Update 확인): {}", result.getStock());
         
-        assertThat(result.getStock()).isNotEqualTo(INITIAL_STOCK - (THREAD_COUNT * DECREASE_AMOUNT));
+        assertThat(result.getStock()).isNotEqualTo(initialStock - (threadCount * decreaseAmount));
     }
 }

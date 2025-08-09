@@ -4,8 +4,7 @@ import com.loopers.domain.like.LikeCommand;
 import com.loopers.domain.like.LikeInfo;
 import com.loopers.domain.like.LikedProductDto;
 import com.loopers.domain.like.LikeService;
-import com.loopers.domain.product.ProductCountEntity;
-import com.loopers.infrastructure.product.ProductCountJpaRepository;
+import com.loopers.domain.product.ProductCountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LikeFacade {
 
     private final LikeService likeService;
-    private final ProductCountJpaRepository productCountRepository;
+    private final ProductCountService productCountService;
 
     /**
      * 좋아요 추가
@@ -34,25 +33,18 @@ public class LikeFacade {
         
         if (added) {
             // 2. 카운트 증가 (비관적 락)
-            ProductCountEntity productCount = productCountRepository
-                .findByProductIdWithPessimisticLock(criteria.productId())
-                .orElseGet(() -> new ProductCountEntity(criteria.productId()));
+            Long likeCount = productCountService.incrementLikeCountWithLock(criteria.productId());
             
-            productCount.incrementLikeCount();
-            productCountRepository.save(productCount);
-            
-            log.debug("좋아요 추가 완료 - 현재 카운트: {}", productCount.getLikeCount());
+            log.debug("좋아요 추가 완료 - 현재 카운트: {}", likeCount);
             
             // 3. 결과 반환
-            LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(true, productCount.getLikeCount());
+            LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(true, likeCount);
             return LikeResult.LikeToggleResult.from(domainInfo);
         } else {
             log.debug("중복 좋아요 - userId: {}, productId: {}", criteria.userId(), criteria.productId());
             
             // 현재 카운트 조회
-            Long likeCount = productCountRepository.findByProductId(criteria.productId())
-                .map(ProductCountEntity::getLikeCount)
-                .orElse(0L);
+            Long likeCount = productCountService.getLikeCount(criteria.productId());
             
             LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(true, likeCount);
             return LikeResult.LikeToggleResult.from(domainInfo);
@@ -72,28 +64,17 @@ public class LikeFacade {
         
         if (removed) {
             // 2. 카운트 감소 (비관적 락)
-            ProductCountEntity productCount = productCountRepository
-                .findByProductIdWithPessimisticLock(criteria.productId())
-                .orElseThrow(() -> new IllegalStateException("상품 카운트 정보가 없습니다."));
-            
-            // 음수 방지
-            if (productCount.getLikeCount() > 0) {
-                productCount.decrementLikeCount();
-                productCountRepository.save(productCount);
-            }
-            
-            log.debug("좋아요 삭제 완료 - 현재 카운트: {}", productCount.getLikeCount());
+            Long likeCount = productCountService.decrementLikeCountWithLock(criteria.productId());
+            log.debug("좋아요 삭제 완료 - 현재 카운트: {}", likeCount);
             
             // 3. 결과 반환
-            LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(false, productCount.getLikeCount());
+            LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(false, likeCount);
             return LikeResult.LikeToggleResult.from(domainInfo);
         } else {
             log.debug("삭제할 좋아요 없음 - userId: {}, productId: {}", criteria.userId(), criteria.productId());
             
             // 현재 카운트 조회
-            Long likeCount = productCountRepository.findByProductId(criteria.productId())
-                .map(ProductCountEntity::getLikeCount)
-                .orElse(0L);
+            Long likeCount = productCountService.getLikeCount(criteria.productId());
             
             LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(false, likeCount);
             return LikeResult.LikeToggleResult.from(domainInfo);

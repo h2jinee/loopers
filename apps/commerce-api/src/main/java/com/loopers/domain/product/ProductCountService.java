@@ -1,7 +1,5 @@
 package com.loopers.domain.product;
 
-import com.loopers.infrastructure.product.ProductCountJpaRepository;
-import com.loopers.infrastructure.like.LikeJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,21 +8,62 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ProductCountService {
     
-    private final ProductCountJpaRepository productCountJpaRepository;
-    private final LikeJpaRepository likeJpaRepository;
+    private final ProductCountRepository productCountRepository;
 
 	// 비관적 락
     @Transactional
     public void updateLikeCountPessimistic(ProductCountCommand.UpdateLikeCount command) {
         // 1. 락 획득
-        ProductCountEntity productCount = productCountJpaRepository.findByProductIdWithPessimisticLock(command.productId())
+        ProductCountEntity productCount = productCountRepository.findByProductIdWithPessimisticLock(command.productId())
             .orElseGet(() -> new ProductCountEntity(command.productId()));
         
         // 2. 락 획득 후 COUNT 쿼리 실행
-        Long likeCount = likeJpaRepository.countByProductId(command.productId());
+        Long likeCount = productCountRepository.countLikesByProductId(command.productId());
         
         // 3. 업데이트
         productCount.updateLikeCount(likeCount);
-        productCountJpaRepository.save(productCount);
+        productCountRepository.save(productCount);
+    }
+    
+    /**
+     * 좋아요 카운트 증가 (비관적 락)
+     */
+    @Transactional
+    public Long incrementLikeCountWithLock(Long productId) {
+        ProductCountEntity productCount = productCountRepository
+            .findByProductIdWithPessimisticLock(productId)
+            .orElseGet(() -> new ProductCountEntity(productId));
+        
+        productCount.incrementLikeCount();
+        productCountRepository.save(productCount);
+        
+        return productCount.getLikeCount();
+    }
+    
+    /**
+     * 좋아요 카운트 감소 (비관적 락)
+     */
+    @Transactional
+    public Long decrementLikeCountWithLock(Long productId) {
+        ProductCountEntity productCount = productCountRepository
+            .findByProductIdWithPessimisticLock(productId)
+            .orElseThrow(() -> new IllegalStateException("상품 카운트 정보가 없습니다."));
+        
+        // 음수 방지
+        if (productCount.getLikeCount() > 0) {
+            productCount.decrementLikeCount();
+            productCountRepository.save(productCount);
+        }
+        
+        return productCount.getLikeCount();
+    }
+    
+    /**
+     * 좋아요 카운트 조회
+     */
+    public Long getLikeCount(Long productId) {
+        return productCountRepository.findByProductId(productId)
+            .map(ProductCountEntity::getLikeCount)
+            .orElse(0L);
     }
 }

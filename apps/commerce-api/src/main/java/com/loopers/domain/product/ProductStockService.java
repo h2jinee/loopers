@@ -80,8 +80,16 @@ public class ProductStockService {
 
     
     @Transactional
-    public void increaseStockBatchForCompensation(Map<Long, Integer> stockUpdates) {
-        stockUpdates.forEach(productStockJpaRepository::increaseStockBatch
-        );
+    public void restoreStocks(Map<Long, Integer> stockUpdates) {
+        stockUpdates.forEach((productId, quantity) -> {
+            // 비관적 락을 사용하여 동시성 제어
+            ProductStockEntity stock = productStockJpaRepository
+                .findByProductIdWithPessimisticLock(productId)
+                .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
+                    "재고를 찾을 수 없습니다. productId: " + productId));
+            
+            stock.increase(quantity);
+            productStockJpaRepository.save(stock);
+        });
     }
 }

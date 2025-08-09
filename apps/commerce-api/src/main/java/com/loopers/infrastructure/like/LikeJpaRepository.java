@@ -24,8 +24,8 @@ public interface LikeJpaRepository extends JpaRepository<LikeEntity, Long>, Like
             p.nameKo,
             p.description,
             p.price,
-            CAST(COALESCE(pc.likeCount, 0) AS long),
-            CASE WHEN p.status = 'AVAILABLE' THEN true ELSE false END,
+            pc.likeCount,
+            p.status,
             l.createdAt
         )
         FROM LikeEntity l

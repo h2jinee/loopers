@@ -10,7 +10,6 @@ import com.loopers.domain.common.Money;
 import com.loopers.infrastructure.like.LikeJpaRepository;
 import com.loopers.infrastructure.product.ProductCountJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +19,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -30,14 +30,13 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-@SpringBootTest
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @EnableRetry
+@SpringBootTest
 class LikeConcurrencyTest {
-    
-    private static final Logger log = LoggerFactory.getLogger(LikeConcurrencyTest.class);
 
     @Autowired
     private LikeJpaRepository likeJpaRepository;
@@ -51,16 +50,10 @@ class LikeConcurrencyTest {
     @Autowired
     private TestLikeFacade testLikeFacade;
 
-    private Long productId;
-    private static final int THREAD_COUNT = 100;
+	private Long productId;
 
     @BeforeEach
     void setUp() {
-        // 이전 데이터 정리
-        likeJpaRepository.deleteAll();
-        productCountJpaRepository.deleteAll();
-        productJpaRepository.deleteAll();
-        
         // 상품 생성 (동적 ID 생성)
         ProductEntity product = new ProductEntity(
             System.currentTimeMillis() % 10000,  // 동적 brandId
@@ -72,7 +65,7 @@ class LikeConcurrencyTest {
             Money.of(0)
         );
         ProductEntity savedProduct = productJpaRepository.save(product);
-        productId = savedProduct.getId();
+		productId = savedProduct.getId();
 
         // 상품 카운트 엔티티 초기화
         ProductCountEntity productCount = new ProductCountEntity(productId);
@@ -81,17 +74,12 @@ class LikeConcurrencyTest {
         log.info("테스트 셋업 완료 - 상품 ID: {}", productId);
     }
 
-    @AfterEach
-    void tearDown() {
-        likeJpaRepository.deleteAll();
-        productCountJpaRepository.deleteAll();
-        productJpaRepository.deleteAll();
-    }
-
     @Test
     @DisplayName("비관적 락 - 100명이 동시에 좋아요 추가 시 정상 처리")
     void pessimisticLock_likeAdd() throws InterruptedException {
         // given
+		int THREAD_COUNT = 100;
+
         List<Runnable> tasks = new ArrayList<>();
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failCount = new AtomicInteger(0);
@@ -148,6 +136,7 @@ class LikeConcurrencyTest {
     @DisplayName("낙관적 락 - 100명이 동시에 좋아요 추가 시 정상 처리")
     void optimisticLock_likeAdd() throws InterruptedException {
         // given
+		int THREAD_COUNT = 100;
         List<Runnable> tasks = new ArrayList<>();
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger retryCount = new AtomicInteger(0);
@@ -166,10 +155,10 @@ class LikeConcurrencyTest {
                     }
                 } catch (ObjectOptimisticLockingFailureException e) {
                     retryCount.incrementAndGet();
-                    System.out.println("낙관적 락 재시도: " + e.getMessage());
+                    log.error("낙관적 락 재시도: {}", e.getMessage());
                 } catch (Exception e) {
                     failCount.incrementAndGet();
-                    System.out.println("낙관적 락 좋아요 추가 실패: " + e.getMessage());
+                    log.error("낙관적 락 좋아요 추가 실패: {}", e.getMessage());
                 }
             });
         }
@@ -198,6 +187,7 @@ class LikeConcurrencyTest {
     @DisplayName("락 없음 - 100명이 동시에 좋아요 추가 시 Lost Update 문제 발생")
     void noLock_likeAdd() throws InterruptedException {
         // given
+		int THREAD_COUNT = 100;
         List<Runnable> tasks = new ArrayList<>();
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger duplicateCount = new AtomicInteger(0);
@@ -215,7 +205,7 @@ class LikeConcurrencyTest {
                     }
                 } catch (Exception e) {
                     failCount.incrementAndGet();
-                    System.out.println("락 없음 좋아요 추가 실패: " + e.getMessage());
+                    log.error("락 없음 좋아요 추가 실패: {}", e.getMessage());
                 }
             });
         }
@@ -262,7 +252,7 @@ class LikeConcurrencyTest {
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failCount.incrementAndGet();
-                    System.out.println("토글 실패: " + e.getMessage());
+                    log.error("토글 실패: {}", e.getMessage());
                 }
             });
         }
@@ -288,43 +278,41 @@ class LikeConcurrencyTest {
         @Bean
         public TestLikeFacade testLikeFacade(LikeService likeService, 
                                             ProductCountService productCountService,
-                                            ProductCountJpaRepository productCountJpaRepository) {
-            return new TestLikeFacade(likeService, productCountService, productCountJpaRepository);
+                                            TestProductCountService testProductCountService) {
+            return new TestLikeFacade(likeService, productCountService, testProductCountService);
+        }
+        
+        @Bean
+        public TestProductCountService testProductCountService(ProductCountJpaRepository productCountJpaRepository) {
+            return new TestProductCountService(productCountJpaRepository);
         }
     }
 
+    // 테스트용 Facade - static 클래스로 선언 (인스턴스와 무관하게 동작)
     static class TestLikeFacade {
         private final LikeService likeService;
         private final ProductCountService productCountService;
-        private final ProductCountJpaRepository productCountJpaRepository;
+        private final TestProductCountService testProductCountService;
 
         public TestLikeFacade(LikeService likeService, 
                             ProductCountService productCountService,
-                            ProductCountJpaRepository productCountJpaRepository) {
+                            TestProductCountService testProductCountService) {
             this.likeService = likeService;
             this.productCountService = productCountService;
-            this.productCountJpaRepository = productCountJpaRepository;
+            this.testProductCountService = testProductCountService;
         }
 
         @Transactional
         public boolean addLikePessimistic(String userId, Long productId) {
             log.debug("addLikePessimistic 시작 - userId: {}, productId: {}", userId, productId);
             
-            // 단일 트랜잭션 내에서 처리
             LikeCommand.Toggle command = new LikeCommand.Toggle(userId, productId);
             boolean added = likeService.addLike(command);
             log.debug("likeService.addLike 결과: {}", added);
             
             if (added) {
-                // 비관적 락으로 카운트 증가
-                ProductCountEntity productCount = productCountJpaRepository
-                    .findByProductIdWithPessimisticLock(productId)
-                    .orElseGet(() -> new ProductCountEntity(productId));
-                
-                productCount.incrementLikeCount();
-                productCountJpaRepository.save(productCount);
-                
-                log.debug("카운트 증가 완료 - 현재 값: {}", productCount.getLikeCount());
+                // 테스트 전용 Service 계층을 통해 처리
+                testProductCountService.incrementLikeCountWithPessimisticLock(productId);
                 return true;
             }
             return false;
@@ -332,7 +320,7 @@ class LikeConcurrencyTest {
 
         @Transactional
         @Retryable(
-			retryFor = ObjectOptimisticLockingFailureException.class,
+            retryFor = ObjectOptimisticLockingFailureException.class,
             maxAttempts = 3,
             backoff = @Backoff(delay = 100)
         )
@@ -341,13 +329,8 @@ class LikeConcurrencyTest {
             boolean added = likeService.addLike(command);
             
             if (added) {
-                // 낙관적 락으로 카운트 증가
-                ProductCountEntity productCount = productCountJpaRepository
-                    .findByProductIdWithOptimisticLock(productId)
-                    .orElseGet(() -> new ProductCountEntity(productId));
-                
-                productCount.incrementLikeCount();
-                productCountJpaRepository.save(productCount);
+                // 테스트 전용 Service 계층을 통해 처리
+                testProductCountService.incrementLikeCountWithOptimisticLock(productId);
                 return true;
             }
             return false;
@@ -359,11 +342,8 @@ class LikeConcurrencyTest {
             boolean added = likeService.addLike(command);
             
             if (added) {
-                // Lost Update 발생을 위해 락 없이 처리
-                ProductCountEntity productCount = productCountJpaRepository.findByProductId(productId)
-                    .orElseGet(() -> new ProductCountEntity(productId));
-                productCount.incrementLikeCount();
-                productCountJpaRepository.save(productCount);
+                // 테스트 전용 Service 계층을 통해 처리 (락 없이)
+                testProductCountService.incrementLikeCountNoLock(productId);
                 return true;
             }
             return false;
@@ -379,7 +359,50 @@ class LikeConcurrencyTest {
             } else {
                 likeService.addLike(toggleCommand);
             }
-            productCountService.updateLikeCountPessimistic(new ProductCountCommand.UpdateLikeCount(productId));
+            productCountService.updateLikeCountPessimistic(
+                new ProductCountCommand.UpdateLikeCount(productId)
+            );
+        }
+    }
+    
+    // 테스트 전용 Service 계층 (Repository 접근을 캡슐화)
+    @Service
+    static class TestProductCountService {
+        private final ProductCountJpaRepository productCountJpaRepository;
+        
+        public TestProductCountService(ProductCountJpaRepository productCountJpaRepository) {
+            this.productCountJpaRepository = productCountJpaRepository;
+        }
+        
+        @Transactional
+        public void incrementLikeCountWithPessimisticLock(Long productId) {
+            ProductCountEntity productCount = productCountJpaRepository
+                .findByProductIdWithPessimisticLock(productId)
+                .orElseGet(() -> new ProductCountEntity(productId));
+            
+            productCount.incrementLikeCount();
+            productCountJpaRepository.save(productCount);
+            log.debug("비관적 락 카운트 증가 완료 - 현재 값: {}", productCount.getLikeCount());
+        }
+        
+        @Transactional
+        public void incrementLikeCountWithOptimisticLock(Long productId) {
+            ProductCountEntity productCount = productCountJpaRepository
+                .findByProductIdWithOptimisticLock(productId)
+                .orElseGet(() -> new ProductCountEntity(productId));
+            
+            productCount.incrementLikeCount();
+            productCountJpaRepository.save(productCount);
+        }
+        
+        @Transactional
+        public void incrementLikeCountNoLock(Long productId) {
+            ProductCountEntity productCount = productCountJpaRepository
+                .findByProductId(productId)
+                .orElseGet(() -> new ProductCountEntity(productId));
+                
+            productCount.incrementLikeCount();
+            productCountJpaRepository.save(productCount);
         }
     }
 }

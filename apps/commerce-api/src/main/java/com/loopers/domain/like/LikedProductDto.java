@@ -1,8 +1,12 @@
 package com.loopers.domain.like;
 
+import com.loopers.domain.product.vo.ProductStatus;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 
+import lombok.Getter;
+
+@Getter
 public class LikedProductDto {
     private final Long productId;
     private final Long brandId;
@@ -22,7 +26,7 @@ public class LikedProductDto {
         String description,
         BigDecimal price,
         Long likeCount,
-        boolean isAvailable,
+        ProductStatus status,
         ZonedDateTime likedAt
     ) {
         this.productId = productId;
@@ -31,18 +35,9 @@ public class LikedProductDto {
         this.productNameKo = productNameKo;
         this.description = description;
         this.price = price;
-        this.likeCount = likeCount;
-        this.isAvailable = isAvailable;
+        this.likeCount = likeCount != null ? likeCount : 0L;
+        this.isAvailable = status == ProductStatus.AVAILABLE;
         this.likedAt = likedAt;
     }
-    
-    public Long getProductId() { return productId; }
-    public Long getBrandId() { return brandId; }
-    public String getBrandNameKo() { return brandNameKo; }
-    public String getProductNameKo() { return productNameKo; }
-    public String getDescription() { return description; }
-    public BigDecimal getPrice() { return price; }
-    public Long getLikeCount() { return likeCount; }
-    public boolean isAvailable() { return isAvailable; }
-    public ZonedDateTime getLikedAt() { return likedAt; }
+
 }

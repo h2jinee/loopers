@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import com.loopers.domain.product.ProductEntity;
 import com.loopers.domain.product.ProductWithBrandDto;
+import com.loopers.domain.product.ProductWithLikeCountDto;
 import com.loopers.domain.product.ProductStockInfo;
 
 import java.util.List;
@@ -16,11 +17,28 @@ import java.util.List;
 @Repository
 public interface ProductJpaRepository extends JpaRepository<ProductEntity, Long> {
     
-    Page<ProductEntity> findByBrandId(Long brandId, Pageable pageable);
+    @Query("""
+        SELECT new com.loopers.domain.product.ProductWithLikeCountDto(
+            p, pc.likeCount
+        )
+        FROM ProductEntity p
+        LEFT JOIN ProductCountEntity pc ON p.id = pc.productId
+        """)
+    Page<ProductWithLikeCountDto> findAllWithLikeCountOptimized(Pageable pageable);
+    
+    @Query("""
+        SELECT new com.loopers.domain.product.ProductWithLikeCountDto(
+            p, pc.likeCount
+        )
+        FROM ProductEntity p
+        LEFT JOIN ProductCountEntity pc ON p.id = pc.productId
+        WHERE p.brandId = :brandId
+        """)
+    Page<ProductWithLikeCountDto> findByBrandIdWithLikeCountOptimized(@Param("brandId") Long brandId, Pageable pageable);
     
     @Query("""
         SELECT new com.loopers.domain.product.ProductWithBrandDto(
-            p, b, CAST(COALESCE(pc.likeCount, 0) AS long)
+            p, b, pc.likeCount
         )
         FROM ProductEntity p
         LEFT JOIN BrandEntity b ON p.brandId = b.id
@@ -31,7 +49,7 @@ public interface ProductJpaRepository extends JpaRepository<ProductEntity, Long>
     
     @Query("""
         SELECT new com.loopers.domain.product.ProductWithBrandDto(
-            p, b, CAST(COALESCE(pc.likeCount, 0) AS long)
+            p, b, pc.likeCount
         )
         FROM ProductEntity p
         LEFT JOIN BrandEntity b ON p.brandId = b.id

@@ -1,8 +1,7 @@
 package com.loopers.domain.product;
 
 import com.loopers.domain.brand.BrandEntity;
-import com.loopers.infrastructure.brand.BrandJpaRepository;
-import com.loopers.infrastructure.product.ProductJpaRepository;
+import com.loopers.domain.brand.BrandRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +19,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductService {
     
-    private final ProductJpaRepository productJpaRepository;
     private final ProductRepository productRepository;
-    private final BrandJpaRepository brandJpaRepository;
+    private final BrandRepository brandRepository;
     private final ProductStockService productStockService;
 
     public ProductEntity getProduct(ProductCommand.GetOne command) {
@@ -30,7 +28,7 @@ public class ProductService {
     }
     
     private ProductEntity getProductById(Long productId) {
-        return productJpaRepository.findById(productId)
+        return productRepository.findById(productId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품을 찾을 수 없습니다."));
     }
     
@@ -69,7 +67,7 @@ public class ProductService {
     public ProductWithBrand getProductWithBrand(ProductCommand.GetOne command) {
         ProductEntity product = getProductById(command.productId());
         
-        BrandEntity brand = brandJpaRepository.findById(product.getBrandId())
+        BrandEntity brand = brandRepository.findById(product.getBrandId())
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "브랜드를 찾을 수 없습니다."));
         
         return new ProductWithBrand(product, brand);
@@ -111,7 +109,7 @@ public class ProductService {
             .map(item -> item.productWithBrand().productId())
             .collect(Collectors.toList());
         
-        Map<Long, ProductEntity> productMap = productJpaRepository.findAllByIdIn(productIds)
+        Map<Long, ProductEntity> productMap = productRepository.findAllByIdIn(productIds)
             .stream()
             .collect(Collectors.toMap(ProductEntity::getId, p -> p));
         
@@ -120,7 +118,7 @@ public class ProductService {
             .distinct()
             .collect(Collectors.toList());
         
-        Map<Long, BrandEntity> brandMap = brandJpaRepository.findAllById(brandIds)
+        Map<Long, BrandEntity> brandMap = brandRepository.findAllById(brandIds)
             .stream()
             .collect(Collectors.toMap(BrandEntity::getId, b -> b));
         

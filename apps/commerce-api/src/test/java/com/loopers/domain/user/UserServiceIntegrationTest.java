@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,10 +28,11 @@ public class UserServiceIntegrationTest {
 	@Autowired
 	private UserService userService;
 
-    @AfterEach
-    void tearDown() {
-        userJpaRepository.deleteAll();
-    }
+	@BeforeEach
+	public void setUp() {
+		// 기존 데이터 정리
+		userJpaRepository.deleteAll();
+	}
 
 	/*
 	* 회원 가입 통합 테스트
