@@ -42,6 +42,7 @@ public class ProductCountService {
     
     /**
      * 좋아요 카운트 감소 (비관적 락)
+     * 음수 방지 로직은 ProductCountEntity 내부에서 처리
      */
     @Transactional
     public Long decrementLikeCountWithLock(Long productId) {
@@ -49,11 +50,8 @@ public class ProductCountService {
             .findByProductIdWithPessimisticLock(productId)
             .orElseThrow(() -> new IllegalStateException("상품 카운트 정보가 없습니다."));
         
-        // 음수 방지
-        if (productCount.getLikeCount() > 0) {
-            productCount.decrementLikeCount();
-            productCountRepository.save(productCount);
-        }
+        productCount.decrementLikeCount();
+        productCountRepository.save(productCount);
         
         return productCount.getLikeCount();
     }
