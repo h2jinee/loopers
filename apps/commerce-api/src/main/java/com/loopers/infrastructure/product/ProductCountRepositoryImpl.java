@@ -2,50 +2,36 @@ package com.loopers.infrastructure.product;
 
 import com.loopers.domain.product.ProductCountEntity;
 import com.loopers.domain.product.ProductCountRepository;
+import com.loopers.infrastructure.like.LikeJpaRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
+@RequiredArgsConstructor
 public class ProductCountRepositoryImpl implements ProductCountRepository {
     
-    private final Map<Long, ProductCountEntity> store = new ConcurrentHashMap<>();
+    private final ProductCountJpaRepository productCountJpaRepository;
+    private final LikeJpaRepository likeJpaRepository;
     
     @Override
     public ProductCountEntity save(ProductCountEntity productCount) {
-        if (productCount.getId() == null || productCount.getId() == 0L) {
-            // 새 엔티티 생성 시 prePersist 호출
-            try {
-                var prePersistMethod = productCount.getClass().getSuperclass().getDeclaredMethod("prePersist");
-                prePersistMethod.setAccessible(true);
-                prePersistMethod.invoke(productCount);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to persist product count", e);
-            }
-        } else {
-            // 업데이트 시 preUpdate 호출
-            try {
-                var preUpdateMethod = productCount.getClass().getSuperclass().getDeclaredMethod("preUpdate");
-                preUpdateMethod.setAccessible(true);
-                preUpdateMethod.invoke(productCount);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to update product count", e);
-            }
-        }
-        
-        store.put(productCount.getProductId(), productCount);
-        return productCount;
+        return productCountJpaRepository.save(productCount);
     }
     
     @Override
     public Optional<ProductCountEntity> findByProductId(Long productId) {
-        return Optional.ofNullable(store.get(productId));
+        return productCountJpaRepository.findByProductId(productId);
     }
     
     @Override
-    public void clear() {
-        store.clear();
+    public Optional<ProductCountEntity> findByProductIdWithPessimisticLock(Long productId) {
+        return productCountJpaRepository.findByProductIdWithPessimisticLock(productId);
+    }
+    
+    @Override
+    public Long countLikesByProductId(Long productId) {
+        return likeJpaRepository.countByProductId(productId);
     }
 }

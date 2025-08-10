@@ -7,5 +7,7 @@ public interface ProductCountRepository {
     
     Optional<ProductCountEntity> findByProductId(Long productId);
     
-    void clear();
+    Optional<ProductCountEntity> findByProductIdWithPessimisticLock(Long productId);
+    
+    Long countLikesByProductId(Long productId);
 }

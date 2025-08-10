@@ -42,7 +42,15 @@ public class UserDto {
 				String birth,
                 String email
             ) {
-
+                public static Response from(com.loopers.application.user.UserResult.SignUpResult result) {
+                    return new Response(
+                        result.userId(),
+                        result.name(),
+                        result.gender(),
+                        result.birth(),
+                        result.email()
+                    );
+                }
             }
         }
 
@@ -55,7 +63,15 @@ public class UserDto {
                 String birth,
                 String email
             ) {
-
+                public static Response from(com.loopers.application.user.UserResult.Detail result) {
+                    return new Response(
+                        result.userId(),
+                        result.name(),
+                        result.gender(),
+                        result.birth(),
+                        result.email()
+                    );
+                }
             }
         }
     }

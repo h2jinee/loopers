@@ -14,14 +14,28 @@ public class PointDto {
             public record Response(
                 String userId,
                 Long totalPoint
-            ) {}
+            ) {
+                public static Response from(com.loopers.application.point.PointResult.ChargeResult result) {
+                    return new Response(
+                        result.userId(),
+                        result.balance()
+                    );
+                }
+            }
         }
         
         public static class GetPoint {
             public record Response(
                 String userId,
                 Long point
-            ) {}
+            ) {
+                public static Response from(com.loopers.application.point.PointResult.Detail result) {
+                    return new Response(
+                        result.userId(),
+                        result.balance()
+                    );
+                }
+            }
         }
     }
 }

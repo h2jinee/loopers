@@ -1,36 +1,35 @@
 package com.loopers.infrastructure.point;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
-import org.springframework.stereotype.Repository;
-
 import com.loopers.domain.point.PointEntity;
 import com.loopers.domain.point.PointRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
-@Repository
+import java.util.Optional;
+
+@Component
 @RequiredArgsConstructor
 public class PointRepositoryImpl implements PointRepository {
-
-	// TODO DB 추가 시 Map -> DB 변경해야 함.
-	private final Map<String, PointEntity> store = new HashMap<>();
-
-	@Override
-	public PointEntity save(PointEntity pointEntity) {
-		store.put(pointEntity.getUserId(), pointEntity);
-		return pointEntity;
-	}
-
-	@Override
-	public Optional<PointEntity> findById(String id) {
-		return Optional.ofNullable(store.get(id));
-	}
-
-	@Override
-	public void clear() {
-		store.clear();
-	}
+    
+    private final PointJpaRepository pointJpaRepository;
+    
+    @Override
+    public PointEntity save(PointEntity point) {
+        return pointJpaRepository.save(point);
+    }
+    
+    @Override
+    public Optional<PointEntity> findByUserId(String userId) {
+        return pointJpaRepository.findByUserId(userId);
+    }
+    
+    @Override
+    public Optional<PointEntity> findByUserIdWithPessimisticLock(String userId) {
+        return pointJpaRepository.findByIdWithPessimisticLock(userId);
+    }
+    
+    @Override
+    public Optional<PointEntity> findByUserIdWithOptimisticLock(String userId) {
+        return pointJpaRepository.findByIdWithOptimisticLock(userId);
+    }
 }

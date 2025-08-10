@@ -1,41 +1,30 @@
 package com.loopers.infrastructure.user;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
-import org.springframework.stereotype.Repository;
-
 import com.loopers.domain.user.UserEntity;
 import com.loopers.domain.user.UserRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
-@Repository
+import java.util.Optional;
+
+@Component
 @RequiredArgsConstructor
 public class UserRepositoryImpl implements UserRepository {
-
-	// TODO DB 추가 시 Map -> DB 변경해야 함.
-	private final Map<String, UserEntity> store = new HashMap<>();
-
-	@Override
-	public UserEntity save(UserEntity user) {
-		store.put(user.getUserId(), user);
-        return user;
-	}
-
-	@Override
-	public Optional<UserEntity> findById(String id) {
-		return Optional.ofNullable(store.get(id));
-	}
-
-	@Override
-	public void clear() {
-		store.clear();
-	}
-
-	@Override
-	public boolean existsByUserId(String userId) {
-		return store.containsKey(userId);
-	}
+    
+    private final UserJpaRepository userJpaRepository;
+    
+    @Override
+    public boolean existsByUserId(String userId) {
+        return userJpaRepository.existsByUserId(userId);
+    }
+    
+    @Override
+    public UserEntity save(UserEntity user) {
+        return userJpaRepository.save(user);
+    }
+    
+    @Override
+    public Optional<UserEntity> findByUserId(String userId) {
+        return userJpaRepository.findByUserId(userId);
+    }
 }
