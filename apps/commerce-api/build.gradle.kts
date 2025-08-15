@@ -17,6 +17,9 @@ dependencies {
     // querydsl
     implementation("com.querydsl:querydsl-jpa::jakarta")
 
+    // datafaker
+    implementation("net.datafaker:datafaker:2.4.1")
+    
     // test-fixtures
     testImplementation(testFixtures(project(":modules:jpa")))
     testImplementation(testFixtures(project(":modules:redis")))
