@@ -20,4 +20,10 @@ public interface ProductRepository {
     Page<ProductWithBrandDto> findProductsWithBrandByBrandId(Long brandId, Pageable pageable);
     
     List<ProductStockInfo> findProductStockInfoByIds(List<Long> productIds);
+    
+    ProductEntity save(ProductEntity product);
+    
+    void incrementLikeCount(Long productId);
+    
+    void decrementLikeCount(Long productId);
 }

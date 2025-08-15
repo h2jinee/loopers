@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductCountService {
     
     private final ProductCountRepository productCountRepository;
+    private final ProductRepository productRepository;
 
 	// 비관적 락
     @Transactional
@@ -37,6 +38,9 @@ public class ProductCountService {
         productCount.incrementLikeCount();
         productCountRepository.save(productCount);
         
+        // products 테이블도 동기화 (비정규화)
+        productRepository.incrementLikeCount(productId);
+        
         return productCount.getLikeCount();
     }
     
@@ -52,6 +56,9 @@ public class ProductCountService {
         
         productCount.decrementLikeCount();
         productCountRepository.save(productCount);
+        
+        // products 테이블도 동기화 (비정규화)
+        productRepository.decrementLikeCount(productId);
         
         return productCount.getLikeCount();
     }

@@ -64,4 +64,27 @@ public class ProductRepositoryImpl implements ProductRepository {
         }
         return productJpaRepository.findProductStockInfoByIds(productIds);
     }
+
+    @Override
+    public ProductEntity save(ProductEntity product) {
+        return productJpaRepository.save(product);
+    }
+    
+    @Override
+    public void incrementLikeCount(Long productId) {
+        productJpaRepository.findById(productId).ifPresent(product -> {
+            product.setLikeCount(product.getLikeCount() + 1);
+            productJpaRepository.save(product);
+        });
+    }
+    
+    @Override
+    public void decrementLikeCount(Long productId) {
+        productJpaRepository.findById(productId).ifPresent(product -> {
+            if (product.getLikeCount() > 0) {
+                product.setLikeCount(product.getLikeCount() - 1);
+                productJpaRepository.save(product);
+            }
+        });
+    }
 }
