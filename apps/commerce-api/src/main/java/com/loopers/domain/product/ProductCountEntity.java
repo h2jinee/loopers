@@ -11,7 +11,12 @@ import java.time.ZonedDateTime;
 
 @Entity
 @Getter
-@Table(name = "product_counts")
+@Table(name = "product_counts", indexes = {
+    @Index(name = "idx_product_counts_product_id", columnList = "product_id"),
+    @Index(name = "idx_product_counts_like_desc", columnList = "like_count DESC"),
+    @Index(name = "idx_product_counts_product_like", columnList = "product_id, like_count DESC"),
+    @Index(name = "idx_pc_like_product", columnList = "like_count DESC, product_id")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductCountEntity extends BaseEntity {
     
