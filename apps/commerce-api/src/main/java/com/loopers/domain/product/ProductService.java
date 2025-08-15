@@ -49,16 +49,25 @@ public class ProductService {
     }
     
     /**
-     * 상품 목록 조회 - 페이징
+     * 상품 목록 조회 - 페이징 (비정규화된 like_count 사용)
      */
     public Page<ProductEntity> getProductList(ProductCommand.GetList command) {
         Pageable pageable = createPageable(command);
-        
-        if (command.brandId() != null) {
-            return productRepository.findByBrandIdWithLikeCount(command.brandId(), pageable);
+
+        // Sort 타입에 따라 다른 메서드 호출
+        if (command.sort() == ProductCommand.SortType.LIKES_DESC) {
+            // 좋아요순 정렬 - 인덱스 최적화된 쿼리 사용
+            if (command.brandId() != null) {
+                return productRepository.findByBrandIdWithLikeCount(command.brandId(), pageable);
+            }
+            return productRepository.findAllWithLikeCount(pageable);
+        } else {
+            // 기본 정렬 (최신순, 가격순 등)
+            if (command.brandId() != null) {
+                return productRepository.findByBrandIdWithLikeCount(command.brandId(), pageable);
+            }
+            return productRepository.findAllWithLikeCount(pageable);
         }
-        
-        return productRepository.findAllWithLikeCount(pageable);
     }
     
     /**
