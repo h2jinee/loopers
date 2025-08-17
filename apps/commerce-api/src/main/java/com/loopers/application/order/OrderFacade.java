@@ -5,7 +5,7 @@ import com.loopers.domain.payment.PaymentCommand;
 import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.product.ProductCommand;
 import com.loopers.domain.product.ProductService;
-import com.loopers.domain.product.ProductEntity;
+import com.loopers.domain.product.ProductDomainInfo;
 import com.loopers.domain.product.ProductStockService;
 import com.loopers.domain.point.PointCommand;
 import com.loopers.domain.point.PointService;
@@ -42,7 +42,7 @@ public class OrderFacade {
         OrderCommand.Create command = criteria.toCommand();
         try {
             ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductEntity product = productService.getProduct(getProductCommand);
+            ProductDomainInfo product = productService.getProduct(getProductCommand);
             
             // 동시성 제어 (재고 감소 + 주문 생성)
             productService.decreaseStock(new ProductCommand.DecreaseStock(
@@ -123,7 +123,7 @@ public class OrderFacade {
         
         try {
             ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductEntity product = productService.getProduct(getProductCommand);
+            ProductDomainInfo product = productService.getProduct(getProductCommand);
             
             // 비관적 락으로 재고 차감
             productStockService.decreaseStockPessimistic(command.productId(), command.quantity());
@@ -217,7 +217,7 @@ public class OrderFacade {
         
         try {
             ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductEntity product = productService.getProduct(getProductCommand);
+            ProductDomainInfo product = productService.getProduct(getProductCommand);
             
             // 재고 차감 (낙관적 락)
             productStockService.decreaseStockOptimistic(command.productId(), command.quantity());
@@ -307,7 +307,7 @@ public class OrderFacade {
         
         try {
             ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductEntity product = productService.getProduct(getProductCommand);
+            ProductDomainInfo product = productService.getProduct(getProductCommand);
             
             // 락 없이 재고 차감
             productStockService.decreaseStockNoLock(command.productId(), command.quantity());

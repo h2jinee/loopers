@@ -1,7 +1,7 @@
 package com.loopers.domain.order;
 
 import com.loopers.domain.common.Money;
-import com.loopers.domain.product.ProductEntity;
+import com.loopers.domain.product.ProductDomainInfo;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -22,14 +22,14 @@ public class OrderService {
     private final OrderRepository orderRepository;
 
     public OrderCreationResult createOrderWithoutStockCheck(OrderCommand.CreateWithProduct command) {
-        ProductEntity product = command.product();
+        ProductDomainInfo product = command.product();
         
         OrderEntity order = new OrderEntity(command.userId(), command.receiverInfo());
         
         Money totalPrice = product.getTotalPrice();
         OrderLineEntity orderLine = new OrderLineEntity(
-            product.getId(),
-            product.getNameKo(),
+            product.id(),
+            product.nameKo(),
             command.quantity(),
             totalPrice
         );

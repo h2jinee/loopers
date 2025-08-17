@@ -19,7 +19,7 @@ public class ProductFacade {
         ProductCommand.GetOne command = criteria.toCommand();
         ProductService.ProductWithBrand productWithBrand = productService.getProductWithBrand(command);
         
-        ProductInfo.Detail domainInfo = ProductInfo.Detail.from(productWithBrand.product(), productWithBrand.getBrandName(), productStockService);
+        ProductInfo.Detail domainInfo = ProductInfo.Detail.from(productWithBrand, productStockService);
         return ProductResult.Detail.from(domainInfo);
     }
     

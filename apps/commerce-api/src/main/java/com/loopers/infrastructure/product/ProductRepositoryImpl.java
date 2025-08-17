@@ -5,9 +5,9 @@ import com.loopers.domain.product.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -27,24 +27,12 @@ public class ProductRepositoryImpl implements ProductRepository {
 
     @Override
     public Page<ProductEntity> findAllWithLikeCount(Pageable pageable) {
-        Page<ProductWithLikeCountDto> results = productJpaRepository.findAllWithLikeCountOptimized(pageable);
-        
-        List<ProductEntity> products = results.getContent().stream()
-            .map(ProductWithLikeCountDto::product)
-            .collect(Collectors.toList());
-        
-        return new PageImpl<>(products, pageable, results.getTotalElements());
+        return productJpaRepository.findAllByOrderByLikeCountDesc(pageable);
     }
     
     @Override
     public Page<ProductEntity> findByBrandIdWithLikeCount(Long brandId, Pageable pageable) {
-        Page<ProductWithLikeCountDto> results = productJpaRepository.findByBrandIdWithLikeCountOptimized(brandId, pageable);
-        
-        List<ProductEntity> products = results.getContent().stream()
-            .map(ProductWithLikeCountDto::product)
-            .collect(Collectors.toList());
-        
-        return new PageImpl<>(products, pageable, results.getTotalElements());
+        return productJpaRepository.findByBrandIdOrderByLikeCountDesc(brandId, pageable);
     }
     
     @Override
@@ -63,5 +51,22 @@ public class ProductRepositoryImpl implements ProductRepository {
             return Collections.emptyList();
         }
         return productJpaRepository.findProductStockInfoByIds(productIds);
+    }
+
+    @Override
+    public ProductEntity save(ProductEntity product) {
+        return productJpaRepository.save(product);
+    }
+    
+    @Override
+    @Transactional
+    public void incrementLikeCount(Long productId) {
+        productJpaRepository.incrementLikeCount(productId);
+    }
+    
+    @Override
+    @Transactional
+    public void decrementLikeCount(Long productId) {
+        productJpaRepository.decrementLikeCount(productId);
     }
 }

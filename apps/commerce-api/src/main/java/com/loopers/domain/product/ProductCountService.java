@@ -1,6 +1,8 @@
 package com.loopers.domain.product;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,9 +11,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductCountService {
     
     private final ProductCountRepository productCountRepository;
+    private final ProductRepository productRepository;
 
-	// 비관적 락
+    /**
+     * 비관적 락을 사용한 좋아요 카운트 업데이트
+     * 캐시 무효화 포함
+     */
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "products", key = "#command.productId()"),
+        @CacheEvict(value = "productList", allEntries = true)
+    })
     public void updateLikeCountPessimistic(ProductCountCommand.UpdateLikeCount command) {
         // 1. 락 획득
         ProductCountEntity productCount = productCountRepository.findByProductIdWithPessimisticLock(command.productId())
@@ -27,8 +37,13 @@ public class ProductCountService {
     
     /**
      * 좋아요 카운트 증가 (비관적 락)
+     * 캐시 무효화 포함
      */
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "products", key = "#productId"),
+        @CacheEvict(value = "productList", allEntries = true)
+    })
     public Long incrementLikeCountWithLock(Long productId) {
         ProductCountEntity productCount = productCountRepository
             .findByProductIdWithPessimisticLock(productId)
@@ -37,14 +52,22 @@ public class ProductCountService {
         productCount.incrementLikeCount();
         productCountRepository.save(productCount);
         
+        // products 테이블도 동기화 (비정규화)
+        productRepository.incrementLikeCount(productId);
+        
         return productCount.getLikeCount();
     }
     
     /**
      * 좋아요 카운트 감소 (비관적 락)
      * 음수 방지 로직은 ProductCountEntity 내부에서 처리
+     * 캐시 무효화 포함
      */
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "products", key = "#productId"),
+        @CacheEvict(value = "productList", allEntries = true)
+    })
     public Long decrementLikeCountWithLock(Long productId) {
         ProductCountEntity productCount = productCountRepository
             .findByProductIdWithPessimisticLock(productId)
@@ -52,6 +75,9 @@ public class ProductCountService {
         
         productCount.decrementLikeCount();
         productCountRepository.save(productCount);
+        
+        // products 테이블도 동기화 (비정규화)
+        productRepository.decrementLikeCount(productId);
         
         return productCount.getLikeCount();
     }

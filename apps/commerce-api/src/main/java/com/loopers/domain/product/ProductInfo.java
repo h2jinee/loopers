@@ -1,5 +1,6 @@
 package com.loopers.domain.product;
 
+import com.loopers.domain.brand.BrandDomainInfo;
 import com.loopers.domain.product.vo.ProductStatus;
 
 import java.math.BigDecimal;
@@ -37,6 +38,28 @@ public class ProductInfo {
                 product.getLikeCount(),
                 stockService.isAvailable(product.getId())
             );
+        }
+        
+        public static Detail from(ProductDomainInfo product, BrandDomainInfo brand, ProductStockService stockService) {
+            return new Detail(
+                product.id(),
+                product.brandId(),
+                brand.nameKo(),
+                product.nameKo(),
+                product.description(),
+                product.price(),
+                product.shippingFee(),
+                product.getTotalPrice().amount(),
+                stockService.getStock(product.id()),
+                product.status(),
+                product.releaseYear(),
+                product.likeCount(),
+                stockService.isAvailable(product.id())
+            );
+        }
+        
+        public static Detail from(ProductService.ProductWithBrand productWithBrand, ProductStockService stockService) {
+            return from(productWithBrand.product(), productWithBrand.brand(), stockService);
         }
         
         public static Detail from(ProductWithBrandDto dto, ProductStockInfo stockInfo) {
