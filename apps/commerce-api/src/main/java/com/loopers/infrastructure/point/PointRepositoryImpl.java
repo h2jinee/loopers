@@ -24,12 +24,7 @@ public class PointRepositoryImpl implements PointRepository {
     }
     
     @Override
-    public Optional<PointEntity> findByUserIdWithPessimisticLock(String userId) {
-        return pointJpaRepository.findByIdWithPessimisticLock(userId);
-    }
-    
-    @Override
-    public Optional<PointEntity> findByUserIdWithOptimisticLock(String userId) {
-        return pointJpaRepository.findByIdWithOptimisticLock(userId);
+    public Optional<PointEntity> findByUserIdWithLock(String userId) {
+        return pointJpaRepository.findByUserIdWithLock(userId);
     }
 }

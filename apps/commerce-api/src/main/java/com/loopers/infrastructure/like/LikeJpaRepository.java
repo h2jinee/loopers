@@ -2,7 +2,6 @@ package com.loopers.infrastructure.like;
 
 import com.loopers.domain.like.LikeEntity;
 import com.loopers.domain.like.LikedProductDto;
-import com.loopers.domain.like.LikeRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,7 +10,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface LikeJpaRepository extends JpaRepository<LikeEntity, Long>, LikeRepository {
+public interface LikeJpaRepository extends JpaRepository<LikeEntity, Long> {
+    
+    boolean existsByUserIdAndProductId(String userId, Long productId);
+    
+    void deleteByUserIdAndProductId(String userId, Long productId);
+    
+    java.util.Optional<LikeEntity> findByUserIdAndProductId(String userId, Long productId);
     
     /**
      * 사용자가 좋아요한 상품 목록 조회

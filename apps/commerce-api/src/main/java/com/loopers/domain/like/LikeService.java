@@ -1,6 +1,5 @@
 package com.loopers.domain.like;
 
-import com.loopers.infrastructure.like.LikeJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -14,13 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LikeService {
     
-    private final LikeJpaRepository likeJpaRepository;
+    private final LikeRepository likeRepository;
 
     @Transactional
     public boolean addLike(LikeCommand.Toggle command) {
         try {
             LikeEntity like = new LikeEntity(command.userId(), command.productId());
-            likeJpaRepository.save(like);
+            likeRepository.save(like);
             return true;
         } catch (Exception e) {
             // 다른 스레드가 먼저 insert한 경우
@@ -32,13 +31,13 @@ public class LikeService {
     
     @Transactional
     public boolean removeLike(LikeCommand.Toggle command) {
-        likeJpaRepository.deleteByUserIdAndProductId(command.userId(), command.productId());
+        likeRepository.deleteByUserIdAndProductId(command.userId(), command.productId());
         return true; // 삭제 성공
     }
     
     @Transactional(readOnly = true)
     public boolean isLiked(LikeCommand.IsLiked command) {
-        return likeJpaRepository.existsByUserIdAndProductId(command.userId(), command.productId());
+        return likeRepository.existsByUserIdAndProductId(command.userId(), command.productId());
     }
     
     /**
@@ -49,7 +48,7 @@ public class LikeService {
         log.debug("좋아요한 상품 목록 조회 시작 - userId: {}, page: {}, size: {}", 
                   command.userId(), pageable.getPageNumber(), pageable.getPageSize());
         
-        Page<LikedProductDto> result = likeJpaRepository.findLikedProductsByUserId(
+        Page<LikedProductDto> result = likeRepository.findLikedProductsByUserId(
             command.userId(), 
             pageable
         );

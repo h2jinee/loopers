@@ -9,12 +9,11 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.loopers.domain.product.ProductStockEntity;
-import com.loopers.domain.product.ProductStockRepository;
 
 import jakarta.persistence.LockModeType;
 
 @Repository
-public interface ProductStockJpaRepository extends JpaRepository<ProductStockEntity, Long>, ProductStockRepository {
+public interface ProductStockJpaRepository extends JpaRepository<ProductStockEntity, Long> {
 
 	@Query("SELECT ps FROM ProductStockEntity ps WHERE ps.productId = :productId")
 	Optional<ProductStockEntity> findByProductId(@Param("productId") Long productId);
@@ -22,10 +21,4 @@ public interface ProductStockJpaRepository extends JpaRepository<ProductStockEnt
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT ps FROM ProductStockEntity ps WHERE ps.productId = :productId")
 	Optional<ProductStockEntity> findByProductIdWithPessimisticLock(@Param("productId") Long productId);
-
-	@Lock(LockModeType.OPTIMISTIC)
-	@Query("SELECT ps FROM ProductStockEntity ps WHERE ps.productId = :productId")
-	Optional<ProductStockEntity> findByProductIdWithOptimisticLock(@Param("productId") Long productId);
-
-
 }

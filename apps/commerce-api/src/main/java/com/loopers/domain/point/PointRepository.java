@@ -8,7 +8,5 @@ public interface PointRepository {
     
     Optional<PointEntity> findByUserId(String userId);
     
-    Optional<PointEntity> findByUserIdWithPessimisticLock(String userId);
-    
-    Optional<PointEntity> findByUserIdWithOptimisticLock(String userId);
+    Optional<PointEntity> findByUserIdWithLock(String userId);
 }

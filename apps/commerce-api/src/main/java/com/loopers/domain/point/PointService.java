@@ -63,7 +63,7 @@ public class PointService {
 	@Transactional
 	public void usePoint(PointCommand.Use command) {
 		// 1. 사용자 포인트 정보 조회 (비관적 락)
-		PointEntity point = getPointEntityByUserIdWithPessimisticLock(command.userId());
+		PointEntity point = getPointEntityByUserIdWithLock(command.userId());
 		
 		// 2. 포인트 사용 및 히스토리 생성
 		PointHistoryEntity history = point.use(command.amount(), command.orderId());
@@ -75,44 +75,8 @@ public class PointService {
 		pointHistoryRepository.save(history);
 	}
 	
-	// 비관적 락 테스트
-	@Transactional
-	public void usePointPessimistic(PointCommand.Use command) {
-		PointEntity point = getPointEntityByUserIdWithPessimisticLock(command.userId());
-		PointHistoryEntity history = point.use(command.amount(), command.orderId());
-		
-		pointRepository.save(point);
-		pointHistoryRepository.save(history);
-	}
-	
-	// 낙관적 락 테스트
-	@Transactional
-	public void usePointOptimistic(PointCommand.Use command) {
-		PointEntity point = getPointEntityByUserIdWithOptimisticLock(command.userId());
-		PointHistoryEntity history = point.use(command.amount(), command.orderId());
-		
-		pointRepository.save(point);
-		pointHistoryRepository.save(history);
-	}
-	
-	// Lock 사용 X (동시성 이슈 테스트)
-	@Transactional
-	public void usePointNoLock(PointCommand.Use command) {
-		PointEntity point = getPointEntityByUserId(command.userId());
-		PointHistoryEntity history = point.use(command.amount(), command.orderId());
-		
-		pointRepository.save(point);
-		pointHistoryRepository.save(history);
-	}
-
-	
-	private PointEntity getPointEntityByUserIdWithPessimisticLock(String userId) {
-		return pointRepository.findByUserIdWithPessimisticLock(userId)
-			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "포인트 정보를 찾을 수 없습니다."));
-	}
-	
-	private PointEntity getPointEntityByUserIdWithOptimisticLock(String userId) {
-		return pointRepository.findByUserIdWithOptimisticLock(userId)
+	private PointEntity getPointEntityByUserIdWithLock(String userId) {
+		return pointRepository.findByUserIdWithLock(userId)
 			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "포인트 정보를 찾을 수 없습니다."));
 	}
 }
