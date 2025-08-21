@@ -2,13 +2,21 @@ package com.loopers.domain.common;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import jakarta.persistence.Embeddable;
+import lombok.NonNull;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Objects;
 
-public final class Money {
+@Embeddable
+public class Money implements Comparable<Money>, Serializable {
     
-    private final BigDecimal amount;
+    private BigDecimal amount;
+    
+    protected Money() {
+        this.amount = BigDecimal.ZERO;
+    }
     
     private Money(BigDecimal amount) {
         if (amount == null) {
@@ -32,7 +40,7 @@ public final class Money {
         return new Money(BigDecimal.valueOf(amount));
     }
     
-    public static Money ZERO() {
+    public static Money zero() {
         return new Money(BigDecimal.ZERO);
     }
     
@@ -70,6 +78,11 @@ public final class Money {
             return true;
         }
         return this.amount.compareTo(other.amount) >= 0;
+    }
+    
+    @Override
+    public int compareTo(@NonNull Money other) {
+        return this.amount.compareTo(other.amount);
     }
 
     @Override

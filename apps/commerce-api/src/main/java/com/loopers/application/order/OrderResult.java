@@ -93,4 +93,14 @@ public class OrderResult {
             );
         }
     }
+    
+    public record Statistics(
+        Long totalOrderCount,
+        Long totalOrderAmount,
+        ZonedDateTime lastOrderDate
+    ) {}
+    
+    public record RecentOrders(
+        List<Summary> orders
+    ) {}
 }

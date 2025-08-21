@@ -22,25 +22,7 @@ public class ProductInfo {
         Long likeCount,
         boolean isAvailable
     ) {
-        public static Detail from(ProductEntity product, String brandName, ProductStockService stockService) {
-            return new Detail(
-                product.getId(),
-                product.getBrandId(),
-                brandName,
-                product.getNameKo(),
-                product.getDescription(),
-                product.getPrice().amount(),
-                product.getShippingFee().amount(),
-                product.getTotalPrice().amount(),
-                stockService.getStock(product.getId()),
-                product.getStatus(),
-                product.getReleaseYear(),
-                product.getLikeCount(),
-                stockService.isAvailable(product.getId())
-            );
-        }
-        
-        public static Detail from(ProductDomainInfo product, BrandDomainInfo brand, ProductStockService stockService) {
+        public static Detail from(ProductDomainInfo product, BrandDomainInfo brand, ProductStockInfo stockInfo) {
             return new Detail(
                 product.id(),
                 product.brandId(),
@@ -50,16 +32,12 @@ public class ProductInfo {
                 product.price(),
                 product.shippingFee(),
                 product.getTotalPrice().amount(),
-                stockService.getStock(product.id()),
+                stockInfo.stock(),
                 product.status(),
                 product.releaseYear(),
                 product.likeCount(),
-                stockService.isAvailable(product.id())
+                stockInfo.isAvailable()
             );
-        }
-        
-        public static Detail from(ProductService.ProductWithBrand productWithBrand, ProductStockService stockService) {
-            return from(productWithBrand.product(), productWithBrand.brand(), stockService);
         }
         
         public static Detail from(ProductWithBrandDto dto, ProductStockInfo stockInfo) {
@@ -91,19 +69,6 @@ public class ProductInfo {
         Long likeCount,
         boolean isAvailable
     ) {
-        public static Summary from(ProductEntity product, String brandName, ProductStockService stockService) {
-            return new Summary(
-                product.getId(),
-                product.getBrandId(),
-                brandName,
-                product.getNameKo(),
-                product.getDescription(),
-                product.getPrice().amount(),
-                product.getLikeCount(),
-                stockService.isAvailable(product.getId())
-            );
-        }
-        
         public static Summary from(ProductService.ProductWithBrandAndStock item) {
             return new Summary(
                 item.productWithBrand().productId(),

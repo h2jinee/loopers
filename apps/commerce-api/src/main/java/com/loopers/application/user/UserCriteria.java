@@ -1,7 +1,7 @@
 package com.loopers.application.user;
 
 import com.loopers.domain.user.UserCommand;
-import com.loopers.domain.user.UserEntity;
+import com.loopers.domain.user.User;
 import com.loopers.domain.user.vo.Birth;
 import com.loopers.domain.user.vo.Email;
 import com.loopers.domain.user.vo.UserId;
@@ -11,7 +11,7 @@ public class UserCriteria {
     public record SignUp(
         String userId,
         String name,
-        UserEntity.Gender gender,
+        User.Gender gender,
         String birth,
         String email
     ) {

@@ -18,7 +18,7 @@ public class LikeService {
     @Transactional
     public boolean addLike(LikeCommand.Toggle command) {
         try {
-            LikeEntity like = new LikeEntity(command.userId(), command.productId());
+            Like like = new Like(command.userId(), command.productId());
             likeRepository.save(like);
             return true;
         } catch (Exception e) {
@@ -35,7 +35,6 @@ public class LikeService {
         return true; // 삭제 성공
     }
     
-    @Transactional(readOnly = true)
     public boolean isLiked(LikeCommand.IsLiked command) {
         return likeRepository.existsByUserIdAndProductId(command.userId(), command.productId());
     }
@@ -43,12 +42,11 @@ public class LikeService {
     /**
      * 좋아요한 상품 목록 조회
      */
-    @Transactional(readOnly = true)
     public Page<LikedProductDto> getLikedProducts(LikeCommand.GetList command, Pageable pageable) {
         log.debug("좋아요한 상품 목록 조회 시작 - userId: {}, page: {}, size: {}", 
                   command.userId(), pageable.getPageNumber(), pageable.getPageSize());
         
-        Page<LikedProductDto> result = likeRepository.findLikedProductsByUserId(
+        Page<LikedProductDto> result = likeRepository.findByUserId(
             command.userId(), 
             pageable
         );

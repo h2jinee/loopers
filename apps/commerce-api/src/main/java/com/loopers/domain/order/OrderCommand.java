@@ -103,4 +103,26 @@ public class OrderCommand {
             }
         }
     }
+    
+    public record Cancel(
+        String userId,
+        Long orderId,
+        String reason
+    ) {}
+    
+    public record UpdateStatus(
+        Long orderId,
+        String newStatus,
+        String adminId
+    ) {}
+    
+    public record Search(
+        String userId,
+        String status,
+        String startDate,
+        String endDate,
+        String productName,
+        Integer page,
+        Integer size
+    ) {}
 }

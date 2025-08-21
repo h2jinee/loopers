@@ -10,7 +10,7 @@ public class BrandInfo {
         String profileImageUrl,
         Integer productCount
     ) {
-        public static Detail from(BrandEntity brand, Integer productCount) {
+        public static Detail from(Brand brand, Integer productCount) {
             return new Detail(
                 brand.getId(),
                 brand.getNameKo(),
@@ -28,7 +28,7 @@ public class BrandInfo {
         String nameEn,
         String profileImageUrl
     ) {
-        public static Summary from(BrandEntity brand) {
+        public static Summary from(Brand brand) {
             return new Summary(
                 brand.getId(),
                 brand.getNameKo(),

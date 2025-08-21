@@ -5,11 +5,11 @@ public class UserInfo {
     public record SignUpResult(
         String userId,
         String name,
-        UserEntity.Gender gender,
+        User.Gender gender,
         String birth,
         String email
     ) {
-        public static SignUpResult from(UserEntity user) {
+        public static SignUpResult from(User user) {
             return new SignUpResult(
                 user.getUserId(),
                 user.getName(),
@@ -23,11 +23,11 @@ public class UserInfo {
     public record Detail(
         String userId,
         String name,
-        UserEntity.Gender gender,
+        User.Gender gender,
         String birth,
         String email
     ) {
-        public static Detail from(UserEntity user) {
+        public static Detail from(User user) {
             return new Detail(
                 user.getUserId(),
                 user.getName(),

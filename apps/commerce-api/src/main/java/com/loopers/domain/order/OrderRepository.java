@@ -6,9 +6,9 @@ import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 
 public interface OrderRepository {
-    OrderEntity save(OrderEntity order);
+    Order save(Order order);
     
-    Optional<OrderEntity> findByIdAndUserId(Long orderId, String userId);
+    Optional<Order> findByIdAndUserId(Long orderId, String userId);
     
-    Page<OrderEntity> findByUserId(String userId, Pageable pageable);
+    Page<Order> findByUserId(String userId, Pageable pageable);
 }

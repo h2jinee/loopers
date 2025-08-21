@@ -1,5 +1,6 @@
 package com.loopers.interfaces.api.point;
 
+import com.loopers.application.point.PointResult;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -15,7 +16,7 @@ public class PointDto {
                 String userId,
                 Long totalPoint
             ) {
-                public static Response from(com.loopers.application.point.PointResult.ChargeResult result) {
+                public static Response from(PointResult.Charged result) {
                     return new Response(
                         result.userId(),
                         result.balance()
@@ -29,7 +30,7 @@ public class PointDto {
                 String userId,
                 Long point
             ) {
-                public static Response from(com.loopers.application.point.PointResult.Detail result) {
+                public static Response from(PointResult.Detail result) {
                     return new Response(
                         result.userId(),
                         result.balance()

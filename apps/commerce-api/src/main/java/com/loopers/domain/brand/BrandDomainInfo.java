@@ -10,7 +10,7 @@ public record BrandDomainInfo(
     String profileImageUrl,
     ZonedDateTime createdAt
 ) {
-    public static BrandDomainInfo from(BrandEntity entity) {
+    public static BrandDomainInfo from(Brand entity) {
         return new BrandDomainInfo(
             entity.getId(),
             entity.getNameKo(),

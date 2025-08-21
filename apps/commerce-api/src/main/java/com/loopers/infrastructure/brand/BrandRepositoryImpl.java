@@ -1,6 +1,6 @@
 package com.loopers.infrastructure.brand;
 
-import com.loopers.domain.brand.BrandEntity;
+import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -15,12 +15,12 @@ public class BrandRepositoryImpl implements BrandRepository {
     private final BrandJpaRepository brandJpaRepository;
     
     @Override
-    public Optional<BrandEntity> findById(Long brandId) {
+    public Optional<Brand> findById(Long brandId) {
         return brandJpaRepository.findById(brandId);
     }
 
     @Override
-    public List<BrandEntity> findAllById(List<Long> brandIds) {
+    public List<Brand> findAllById(List<Long> brandIds) {
         return brandJpaRepository.findAllById(brandIds);
     }
 }

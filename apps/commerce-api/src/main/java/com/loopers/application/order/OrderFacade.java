@@ -1,20 +1,15 @@
 package com.loopers.application.order;
 
+import com.loopers.application.payment.PaymentProcessor;
 import com.loopers.domain.order.*;
-import com.loopers.domain.payment.PaymentCommand;
-import com.loopers.domain.payment.PaymentService;
-import com.loopers.domain.product.ProductCommand;
-import com.loopers.domain.product.ProductService;
-import com.loopers.domain.product.ProductDomainInfo;
-import com.loopers.domain.product.ProductStockService;
-import com.loopers.domain.point.PointCommand;
-import com.loopers.domain.point.PointService;
-import com.loopers.domain.point.PointEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,96 +18,60 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderFacade {
     
-    private final OrderService orderService;
-    private final ProductService productService;
-    private final PaymentService paymentService;
-    private final PointService pointService;
+    private final OrderRepository orderRepository;
+    private final OrderProcessor orderProcessor;
+    private final PaymentProcessor paymentProcessor;
     
     @Transactional
     public OrderResult.CreateResult createOrder(OrderCriteria.Create criteria) {
         OrderCommand.Create command = criteria.toCommand();
-        try {
-            ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductDomainInfo product = productService.getProduct(getProductCommand);
-            
-            // 동시성 제어 (재고 감소 + 주문 생성)
-            productService.decreaseStock(new ProductCommand.DecreaseStock(
-                command.productId(), command.quantity()
-            ));
-            
-            OrderCommand.CreateWithProduct createWithProductCommand = 
-                OrderCommand.CreateWithProduct.from(command, product);
-            OrderService.OrderCreationResult creationResult = 
-                orderService.createOrderWithoutStockCheck(createWithProductCommand);
-            
-            OrderEntity order = creationResult.order();
-            
-            order = orderService.saveOrder(order);
-            Long orderId = order.getId();
-            
-            StockReservationEntity reservation = orderService.createStockReservation(
-                orderId, creationResult.productId(), creationResult.quantity()
-            );
-            orderService.saveStockReservation(reservation);
-            
-            try {
-                PointCommand.GetOne getPointCommand = new PointCommand.GetOne(command.userId());
-                PointEntity point = pointService.getPointEntity(getPointCommand);
-                
-                PaymentCommand.ProcessPayment paymentCommand = 
-                    new PaymentCommand.ProcessPayment(order, command.userId());
-                PaymentCommand.ProcessPaymentWithPoint paymentWithPointCommand = 
-                    PaymentCommand.ProcessPaymentWithPoint.from(paymentCommand, point);
-                paymentService.processPayment(paymentWithPointCommand);
-                
-                PointCommand.Use useCommand = new PointCommand.Use(
-                    command.userId(), order.getTotalAmount(), order.getId()
-                );
-                pointService.usePoint(useCommand);
-                
-                order.confirmPayment();
-                orderService.updateOrder(order);
-                
-                orderService.confirmStockReservations(orderId);
-                
-            } catch (CoreException e) {
-                order.failPayment();
-                orderService.updateOrder(order);
-                
-                orderService.cancelStockReservations(orderId);
-                
-                for (StockReservationEntity stockReservation : orderService.findStockReservationsByOrderId(orderId)) {
-                    if (stockReservation.getStatus() == StockReservationEntity.ReservationStatus.RESERVED) {
-                        ProductCommand.IncreaseStock increaseCommand = new ProductCommand.IncreaseStock(
-                            stockReservation.getProductId(), stockReservation.getQuantity()
-                        );
-                        productService.increaseStock(increaseCommand);
-                    }
-                }
-                
-                throw e;
-            }
-            
-            OrderInfo.CreateResult domainInfo = OrderInfo.CreateResult.from(order);
-            return OrderResult.CreateResult.from(domainInfo);
-            
-        } catch (CoreException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new CoreException(ErrorType.INTERNAL_ERROR, "주문 처리 중 오류가 발생했습니다.");
-        }
+        
+        // 1. 주문 처리 (재고 차감, 주문 생성, 재고 예약)
+        Order order = orderProcessor.processOrder(command);
+        
+        // 2. 결제 처리 (포인트 차감)
+        paymentProcessor.processPayment(order, order.getUserId());
+        
+        // 3. 주문 확정 (상태 변경, 재고 예약 확정)
+        orderProcessor.confirmOrder(order);
+        
+        // 4. 결과 반환
+        // Order에서 첫 번째 주문 라인의 정보 추출
+        OrderLine firstOrderLine = order.getOrderLines().getFirst();
+        OrderInfo.CreateResult domainInfo = OrderInfo.CreateResult.from(
+            order, 
+            firstOrderLine.getProductId(), 
+            firstOrderLine.getQuantity()
+        );
+        OrderResult.CreateResult result = OrderResult.CreateResult.from(domainInfo);
+        
+        log.info("주문 생성 완료 - userId: {}, orderId: {}, totalAmount: {}",
+            order.getUserId(), order.getId(), order.getTotalAmount());
+        
+        return result;
     }
     
     public OrderResult.Detail getOrderDetail(OrderCriteria.GetDetail criteria) {
         OrderCommand.GetDetail command = criteria.toCommand();
-        OrderEntity order = orderService.getUserOrder(command);
+        
+        Order order = orderRepository.findByIdAndUserId(command.orderId(), command.userId())
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
+                "주문을 찾을 수 없습니다. orderId: " + command.orderId()));
+        
         OrderInfo.Detail domainInfo = OrderInfo.Detail.from(order);
         return OrderResult.Detail.from(domainInfo);
     }
     
     public Page<OrderResult.Summary> getUserOrders(OrderCriteria.GetList criteria) {
         OrderCommand.GetList command = criteria.toCommand();
-        Page<OrderEntity> orders = orderService.getUserOrders(command);
+        
+        Pageable pageable = PageRequest.of(
+            command.page(),
+            command.size(),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        
+        Page<Order> orders = orderRepository.findByUserId(command.userId(), pageable);
         
         return orders.map(order -> {
             OrderInfo.Summary domainInfo = OrderInfo.Summary.from(order);

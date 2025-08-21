@@ -11,9 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import com.loopers.domain.point.vo.ChargePoint;
+import com.loopers.application.point.PointFacade;
+import com.loopers.application.point.PointCriteria;
 import com.loopers.domain.user.UserCommand;
-import com.loopers.domain.user.UserEntity;
+import com.loopers.domain.user.User;
 import com.loopers.infrastructure.user.UserJpaRepository;
 import com.loopers.infrastructure.point.PointJpaRepository;
 import com.loopers.infrastructure.point.PointHistoryJpaRepository;
@@ -21,14 +22,12 @@ import com.loopers.domain.user.UserService;
 import com.loopers.domain.user.vo.Birth;
 import com.loopers.domain.user.vo.Email;
 import com.loopers.domain.user.vo.UserId;
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 @SpringBootTest
 public class PointServiceIntegrationTest {
 
 	@Autowired
-	private PointService pointService;
+	private PointFacade pointFacade;
 
 	@Autowired
 	private UserService userService;
@@ -47,14 +46,13 @@ public class PointServiceIntegrationTest {
 		UserCommand.Create command = new UserCommand.Create(
 			new UserId("h2jinee"),
 			"전희진",
-			UserEntity.Gender.F,
+			User.Gender.F,
 			new Birth("1997-01-18"),
 			new Email("wjsgmlwls97@gmail.com")
 		);
-		UserEntity user = userService.createUser(command);
+		User user = userService.createUser(command);
 		// 포인트 초기화
-		PointCommand.Initialize initCommand = new PointCommand.Initialize(user.getUserId());
-		pointService.initializeUserPoint(initCommand);
+		pointFacade.initializeUserPoint(user.getUserId());
 	}
 
 	@AfterEach
@@ -106,29 +104,78 @@ public class PointServiceIntegrationTest {
 
 	/*
 	* 포인트 충전 통합 테스트
+	- [x]  존재하는 유저 ID로 충전을 시도한 경우, 성공한다.
 	- [x]  존재하지 않는 유저 ID로 충전을 시도한 경우, 실패한다.
 	*/
 	@DisplayName("포인트 충전 시")
 	@Nested
-	class chargeUserPoint {
-		@DisplayName("존재하지 않는 유저 ID로 충전을 시도한 경우, 실패한다.")
+	class charge {
+		@DisplayName("존재하는 유저 ID로 충전을 시도한 경우, 성공한다.")
 		@Test
-		void fail_whenUserDoesNotExist() {
+		void success_whenUserExists() {
 			// arrange
-			String userId = "devin";
-			PointCommand.Charge command = new PointCommand.Charge(
-				userId,
-				new ChargePoint(1000L)
-			);
+			String userId = "h2jinee";
+			PointCriteria.Charge criteria = new PointCriteria.Charge(userId, 1000L);
 
-			// act & assert
-			CoreException exception = assertThrows(CoreException.class, () -> {
-				pointService.charge(command);
-			});
+			// act
+			var result = pointFacade.charge(criteria);
 
 			// assert
-			assertThat(exception.getErrorType()).isEqualTo(ErrorType.NOT_FOUND);
-			assertThat(exception.getMessage()).isEqualTo("존재하지 않는 사용자입니다.");
+			assertThat(result).isNotNull();
+			assertThat(result.userId()).isEqualTo(userId);
+			assertThat(result.balance()).isEqualTo(1000L);
+			
+			// DB 확인
+			var point = pointJpaRepository.findByUserId(userId).orElse(null);
+			assertThat(point).isNotNull();
+			assertThat(point.getBalance().amount().longValue()).isEqualTo(1000L);
+		}
+		
+		@DisplayName("포인트가 이미 있는 유저가 충전하면 누적된다.")
+		@Test
+		void accumulates_whenUserAlreadyHasPoints() {
+			// arrange
+			String userId = "h2jinee";
+			PointCriteria.Charge criteria1 = new PointCriteria.Charge(userId, 1000L);
+			PointCriteria.Charge criteria2 = new PointCriteria.Charge(userId, 2000L);
+
+			// act
+			pointFacade.charge(criteria1);
+			var result = pointFacade.charge(criteria2);
+
+			// assert
+			assertThat(result.balance()).isEqualTo(3000L);
+			
+			// DB 확인
+			var point = pointJpaRepository.findByUserId(userId).orElse(null);
+			assertThat(point).isNotNull();
+			assertThat(point.getBalance().amount().longValue()).isEqualTo(3000L);
+		}
+		
+		@DisplayName("포인트가 없는 유저가 충전하면 자동으로 생성된다.")
+		@Test
+		void createsPoint_whenUserHasNoPoints() {
+			// arrange
+			String newUserId = "new-user";
+			// 새 유저 생성 (포인트 초기화 없이)
+			UserCommand.Create userCommand = new UserCommand.Create(
+				new UserId(newUserId),
+				"새유저",
+				User.Gender.M,
+				new Birth("2000-01-01"),
+				new Email("new@test.com")
+			);
+			userService.createUser(userCommand);
+			
+			PointCriteria.Charge criteria = new PointCriteria.Charge(newUserId, 5000L);
+
+			// act
+			var result = pointFacade.charge(criteria);
+
+			// assert
+			assertThat(result).isNotNull();
+			assertThat(result.userId()).isEqualTo(newUserId);
+			assertThat(result.balance()).isEqualTo(5000L);
 		}
 	}
 }

@@ -1,14 +1,14 @@
 package com.loopers.domain.payment;
 
-import com.loopers.domain.order.OrderEntity;
-import com.loopers.domain.point.PointEntity;
+import com.loopers.domain.order.Order;
+import com.loopers.domain.point.Point;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
 public class PaymentCommand {
     
     public record ProcessPayment(
-        OrderEntity order,
+        Order order,
         String userId
     ) {
         public ProcessPayment {
@@ -22,9 +22,9 @@ public class PaymentCommand {
     }
     
     public record ProcessPaymentWithPoint(
-        OrderEntity order,
+        Order order,
         String userId,
-        PointEntity point
+        Point point
     ) {
         public ProcessPaymentWithPoint {
             if (order == null) {
@@ -38,7 +38,7 @@ public class PaymentCommand {
             }
         }
         
-        public static ProcessPaymentWithPoint from(ProcessPayment command, PointEntity point) {
+        public static ProcessPaymentWithPoint from(ProcessPayment command, Point point) {
             return new ProcessPaymentWithPoint(command.order(), command.userId(), point);
         }
     }

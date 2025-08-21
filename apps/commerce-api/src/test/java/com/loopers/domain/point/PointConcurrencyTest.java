@@ -1,5 +1,7 @@
 package com.loopers.domain.point;
 
+import com.loopers.application.point.PointCriteria;
+import com.loopers.application.point.PointFacade;
 import com.loopers.support.util.ConcurrentTestUtil;
 import com.loopers.domain.common.Money;
 import com.loopers.infrastructure.point.PointJpaRepository;
@@ -21,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 class PointConcurrencyTest {
 
     @Autowired
-    private PointService pointService;
+    private PointFacade pointFacade;
 
     @Autowired
     private PointJpaRepository pointRepository;
@@ -32,13 +34,13 @@ class PointConcurrencyTest {
     void setUp() {
         int initialPoint = 10000;
         userId = "test-user-" + System.currentTimeMillis();  // 동적 userId 생성
-        PointEntity point = new PointEntity(userId, Money.of(initialPoint));
+        Point point = new Point(userId, Money.of(initialPoint));
         pointRepository.save(point);
     }
 
     @Test
-    @DisplayName("비관적 락 - 100개 스레드가 동시에 포인트 사용 시 정상 처리")
-    void pessimisticLock() throws InterruptedException {
+    @DisplayName("withLock 패턴 - 100개 스레드가 동시에 포인트 사용 시 정상 처리")
+    void withLockPattern() throws InterruptedException {
         int initialPoint = 10000;
         int threadCount = 100;
         int useAmount = 100;
@@ -50,76 +52,92 @@ class PointConcurrencyTest {
             tasks.add(() -> {
                 try {
                     PointCommand.Use command = new PointCommand.Use(userId, Money.of(useAmount), orderId);
-                    pointService.usePointPessimistic(command);
+                    pointFacade.use(command);
                 } catch (Exception e) {
-                    log.error("비관적 락 실패: {}", e.getMessage());
+                    log.error("withLock 실패: {}", e.getMessage());
                 }
             });
         }
 
         ConcurrentTestUtil.executeAsyncWithTasks(tasks);
 
-        PointEntity result = pointRepository.findByUserId(userId).orElse(null);
+        Point result = pointRepository.findByUserId(userId).orElse(null);
         assertThat(result).isNotNull();
         assertThat(result.getBalance().amount().intValue()).isEqualTo(initialPoint - (threadCount * useAmount));
 
-        log.info("비관적 락 결과: {}", result.getBalance().amount().intValue());
+        log.info("withLock 결과: {}", result.getBalance().amount().intValue());
     }
 
     @Test
-    @DisplayName("낙관적 락 - 100개 스레드가 동시에 포인트 사용 시 정상 처리")
-    void optimisticLock() throws InterruptedException {
+    @DisplayName("포인트 충전 - 100개 스레드가 동시에 포인트 충전 시 정상 처리")
+    void concurrentCharge() throws InterruptedException {
         int threadCount = 100;
-        int useAmount = 100;
+        int chargeAmount = 100;
         
         List<Runnable> tasks = new ArrayList<>();
 
         for (int i = 0; i < threadCount; i++) {
-            final long orderId = i + 1;
             tasks.add(() -> {
                 try {
-                    PointCommand.Use command = new PointCommand.Use(userId, Money.of(useAmount), orderId);
-                    pointService.usePointOptimistic(command);
+                    PointCriteria.Charge criteria =
+                        new PointCriteria.Charge(userId, (long)chargeAmount);
+                    pointFacade.charge(criteria);
                 } catch (Exception e) {
-                    log.error("낙관적 락 재시도 또는 실패: {}", e.getMessage());
+                    log.error("충전 실패: {}", e.getMessage());
                 }
             });
         }
 
         ConcurrentTestUtil.executeAsyncWithTasks(tasks);
 
-        PointEntity result = pointRepository.findByUserId(userId).orElse(null);
+        Point result = pointRepository.findByUserId(userId).orElse(null);
         assertThat(result).isNotNull();
-        log.info("낙관적 락 결과: {}", result.getBalance().amount().intValue());
+        assertThat(result.getBalance().amount().intValue()).isEqualTo(10000 + (threadCount * chargeAmount));
+        log.info("충전 결과: {}", result.getBalance().amount().intValue());
     }
 
     @Test
-    @DisplayName("락 없음 - 100개 스레드가 동시에 포인트 사용 시 Lost Update 문제 발생")
-    void noLock() throws InterruptedException {
+    @DisplayName("동시성 제어 검증 - 포인트 사용과 충전이 동시에 일어날 때 정합성 유지")
+    void mixedOperations() throws InterruptedException {
         int initialPoint = 10000;
-        int threadCount = 100;
-        int useAmount = 100;
+        int threadCount = 50;
+        int operationAmount = 100;
         
         List<Runnable> tasks = new ArrayList<>();
 
-        for (int i = 0; i < threadCount; i++) {
+        // 25개는 포인트 사용
+        for (int i = 0; i < threadCount / 2; i++) {
             final long orderId = i + 1;
             tasks.add(() -> {
                 try {
-                    PointCommand.Use command = new PointCommand.Use(userId, Money.of(useAmount), orderId);
-                    pointService.usePointNoLock(command);
+                    PointCommand.Use command = new PointCommand.Use(userId, Money.of(operationAmount), orderId);
+                    pointFacade.use(command);
                 } catch (Exception e) {
-                    log.error("락 없음 실패: {}", e.getMessage());
+                    log.error("사용 실패: {}", e.getMessage());
+                }
+            });
+        }
+
+        // 25개는 포인트 충전
+        for (int i = 0; i < threadCount / 2; i++) {
+            tasks.add(() -> {
+                try {
+                    PointCriteria.Charge criteria = 
+                        new PointCriteria.Charge(userId, (long)operationAmount);
+                    pointFacade.charge(criteria);
+                } catch (Exception e) {
+                    log.error("충전 실패: {}", e.getMessage());
                 }
             });
         }
 
         ConcurrentTestUtil.executeAsyncWithTasks(tasks);
 
-        PointEntity result = pointRepository.findByUserId(userId).orElse(null);
+        Point result = pointRepository.findByUserId(userId).orElse(null);
         assertThat(result).isNotNull();
-        log.info("락 없음 결과 (Lost Update 확인): {}", result.getBalance().amount().intValue());
         
-        assertThat(result.getBalance().amount().intValue()).isNotEqualTo(initialPoint - (threadCount * useAmount));
+        // 초기값 10000 - (25 * 100) + (25 * 100) = 10000
+        assertThat(result.getBalance().amount().intValue()).isEqualTo(initialPoint);
+        log.info("혼합 작업 결과: {}", result.getBalance().amount().intValue());
     }
 }

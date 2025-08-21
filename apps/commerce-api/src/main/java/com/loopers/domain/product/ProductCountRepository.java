@@ -3,11 +3,11 @@ package com.loopers.domain.product;
 import java.util.Optional;
 
 public interface ProductCountRepository {
-    ProductCountEntity save(ProductCountEntity productCount);
+    ProductCount save(ProductCount productCount);
     
-    Optional<ProductCountEntity> findByProductId(Long productId);
+    Optional<ProductCount> findByProductId(Long productId);
     
-    Optional<ProductCountEntity> findByProductIdWithPessimisticLock(Long productId);
+    Optional<ProductCount> findByProductIdWithLock(Long productId);
     
     Long countLikesByProductId(Long productId);
 }

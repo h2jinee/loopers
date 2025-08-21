@@ -1,6 +1,6 @@
 package com.loopers.infrastructure.like;
 
-import com.loopers.domain.like.LikeEntity;
+import com.loopers.domain.like.Like;
 import com.loopers.domain.like.LikeRepository;
 import com.loopers.domain.like.LikedProductDto;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ public class LikeRepositoryImpl implements LikeRepository {
     private final LikeJpaRepository likeJpaRepository;
     
     @Override
-    public LikeEntity save(LikeEntity like) {
+    public Like save(Like like) {
         return likeJpaRepository.save(like);
     }
     
@@ -30,7 +30,7 @@ public class LikeRepositoryImpl implements LikeRepository {
     }
     
     @Override
-    public Page<LikedProductDto> findLikedProductsByUserId(String userId, Pageable pageable) {
-        return likeJpaRepository.findLikedProductsByUserId(userId, pageable);
+    public Page<LikedProductDto> findByUserId(String userId, Pageable pageable) {
+        return likeJpaRepository.findByUserId(userId, pageable);
     }
 }

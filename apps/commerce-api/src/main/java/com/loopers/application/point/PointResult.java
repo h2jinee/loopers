@@ -4,12 +4,12 @@ import com.loopers.domain.point.PointInfo;
 
 public class PointResult {
     
-    public record ChargeResult(
+    public record Charged(
         String userId,
         Long balance
     ) {
-        public static ChargeResult from(PointInfo.ChargeResult domainInfo) {
-            return new ChargeResult(
+        public static Charged from(PointInfo.Charged domainInfo) {
+            return new Charged(
                 domainInfo.userId(),
                 domainInfo.balance()
             );
@@ -23,7 +23,7 @@ public class PointResult {
         public static Detail from(PointInfo.Detail domainInfo) {
             return new Detail(
                 domainInfo.userId(),
-                domainInfo.balance()
+                domainInfo.balance().longValue()
             );
         }
     }

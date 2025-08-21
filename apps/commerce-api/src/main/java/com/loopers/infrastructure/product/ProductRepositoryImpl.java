@@ -16,22 +16,17 @@ public class ProductRepositoryImpl implements ProductRepository {
     private final ProductJpaRepository productJpaRepository;
     
     @Override
-    public Optional<ProductEntity> findById(Long productId) {
+    public Optional<Product> findById(Long productId) {
         return productJpaRepository.findById(productId);
     }
     
     @Override
-    public List<ProductEntity> findAllByIdIn(List<Long> productIds) {
-        return productJpaRepository.findAllByIdIn(productIds);
-    }
-
-    @Override
-    public Page<ProductEntity> findAllWithLikeCount(Pageable pageable) {
+    public Page<Product> findAllWithLikeCount(Pageable pageable) {
         return productJpaRepository.findAllByOrderByLikeCountDesc(pageable);
     }
     
     @Override
-    public Page<ProductEntity> findByBrandIdWithLikeCount(Long brandId, Pageable pageable) {
+    public Page<Product> findByBrandIdWithLikeCount(Long brandId, Pageable pageable) {
         return productJpaRepository.findByBrandIdOrderByLikeCountDesc(brandId, pageable);
     }
     
@@ -54,7 +49,7 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public ProductEntity save(ProductEntity product) {
+    public Product save(Product product) {
         return productJpaRepository.save(product);
     }
     

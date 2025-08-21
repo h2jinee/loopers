@@ -14,7 +14,7 @@ import jakarta.validation.Valid;
 public interface PointV1ApiSpec {
 
     @Operation(summary = "포인트 충전")
-    ApiResponse<PointDto.V1.Charge.Response> chargeUserPoint(
+    ApiResponse<PointDto.V1.Charge.Response> charge(
         @Valid @RequestBody PointDto.V1.Charge.Request request
     );
 

@@ -2,9 +2,9 @@ package com.loopers.domain.like;
 
 import com.loopers.support.util.ConcurrentTestUtil;
 import com.loopers.domain.product.ProductCountCommand;
-import com.loopers.domain.product.ProductCountEntity;
+import com.loopers.domain.product.ProductCount;
 import com.loopers.domain.product.ProductCountService;
-import com.loopers.domain.product.ProductEntity;
+import com.loopers.domain.product.Product;
 import com.loopers.domain.product.vo.ProductStatus;
 import com.loopers.domain.common.Money;
 import com.loopers.infrastructure.like.LikeJpaRepository;
@@ -55,7 +55,7 @@ class LikeConcurrencyTest {
     @BeforeEach
     void setUp() {
         // 상품 생성 (동적 ID 생성)
-        ProductEntity product = new ProductEntity(
+        Product product = new Product(
             System.currentTimeMillis() % 10000,  // 동적 brandId
             "테스트 상품",
             Money.of(10000),
@@ -64,11 +64,11 @@ class LikeConcurrencyTest {
             2024,
             Money.of(0)
         );
-        ProductEntity savedProduct = productJpaRepository.save(product);
+        Product savedProduct = productJpaRepository.save(product);
 		productId = savedProduct.getId();
 
         // 상품 카운트 엔티티 초기화
-        ProductCountEntity productCount = new ProductCountEntity(productId);
+        ProductCount productCount = new ProductCount(productId);
         productCountJpaRepository.save(productCount);
         
         log.info("테스트 셋업 완료 - 상품 ID: {}", productId);
@@ -115,7 +115,7 @@ class LikeConcurrencyTest {
         Thread.sleep(1000); // 모든 트랜잭션이 커밋될 때까지 대기
         
         Long likeCount = likeJpaRepository.countByProductId(productId);
-        ProductCountEntity productCount = productCountJpaRepository.findByProductId(productId).orElse(null);
+        ProductCount productCount = productCountJpaRepository.findByProductId(productId).orElse(null);
 
         log.info("=== 비관적 락 테스트 결과 ===");
         log.info("실행 시간: {}ms", executionTime);
@@ -170,7 +170,7 @@ class LikeConcurrencyTest {
 
         // then
         Long likeCount = likeJpaRepository.countByProductId(productId);
-        ProductCountEntity productCount = productCountJpaRepository.findByProductId(productId).orElse(null);
+        ProductCount productCount = productCountJpaRepository.findByProductId(productId).orElse(null);
 
         log.info("=== 낙관적 락 테스트 결과 ===");
         log.info("실행 시간: {}ms", executionTime);
@@ -217,7 +217,7 @@ class LikeConcurrencyTest {
 
         // then
         Long likeCount = likeJpaRepository.countByProductId(productId);
-        ProductCountEntity productCount = productCountJpaRepository.findByProductId(productId).orElse(null);
+        ProductCount productCount = productCountJpaRepository.findByProductId(productId).orElse(null);
 
         log.info("=== 락 없음 테스트 결과 ===");
         log.info("실행 시간: {}ms", executionTime);
@@ -376,9 +376,9 @@ class LikeConcurrencyTest {
         
         @Transactional
         public void incrementLikeCountWithPessimisticLock(Long productId) {
-            ProductCountEntity productCount = productCountJpaRepository
+            ProductCount productCount = productCountJpaRepository
                 .findByProductIdWithPessimisticLock(productId)
-                .orElseGet(() -> new ProductCountEntity(productId));
+                .orElseGet(() -> new ProductCount(productId));
             
             productCount.incrementLikeCount();
             productCountJpaRepository.save(productCount);
@@ -387,9 +387,9 @@ class LikeConcurrencyTest {
         
         @Transactional
         public void incrementLikeCountWithOptimisticLock(Long productId) {
-            ProductCountEntity productCount = productCountJpaRepository
+            ProductCount productCount = productCountJpaRepository
                 .findByProductIdWithOptimisticLock(productId)
-                .orElseGet(() -> new ProductCountEntity(productId));
+                .orElseGet(() -> new ProductCount(productId));
             
             productCount.incrementLikeCount();
             productCountJpaRepository.save(productCount);
@@ -397,9 +397,9 @@ class LikeConcurrencyTest {
         
         @Transactional
         public void incrementLikeCountNoLock(Long productId) {
-            ProductCountEntity productCount = productCountJpaRepository
+            ProductCount productCount = productCountJpaRepository
                 .findByProductId(productId)
-                .orElseGet(() -> new ProductCountEntity(productId));
+                .orElseGet(() -> new ProductCount(productId));
                 
             productCount.incrementLikeCount();
             productCountJpaRepository.save(productCount);

@@ -18,7 +18,7 @@ public record ProductDomainInfo(
     Long likeCount,
     ZonedDateTime createdAt
 ) {
-    public static ProductDomainInfo from(ProductEntity entity) {
+    public static ProductDomainInfo from(Product entity) {
         return new ProductDomainInfo(
             entity.getId(),
             entity.getBrandId(),

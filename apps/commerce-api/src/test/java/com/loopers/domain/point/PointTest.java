@@ -7,7 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.loopers.domain.point.vo.ChargePoint;
+import com.loopers.domain.point.vo.Charge;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -28,7 +28,7 @@ public class PointTest {
 	void fail_whenPointIsNotPositive(Long point) {
 		// act & assert
 		final CoreException exception = assertThrows(CoreException.class, () -> {
-			new ChargePoint(point);
+			new Charge(point);
 		});
 
 		// assert

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.brand.BrandCacheDto;
 import com.loopers.domain.brand.BrandDomainInfo;
-import com.loopers.domain.brand.BrandEntity;
+import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -21,7 +21,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,6 @@ public class ProductService {
     
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
-    private final ProductStockService productStockService;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
     private final MeterRegistry meterRegistry;
@@ -107,7 +105,7 @@ public class ProductService {
             
             // 4. 캐시 미스 - DB에서 조회
             dbCallChecker.incrementDbSelectCount();
-            ProductEntity product = productRepository.findById(command.productId()).orElse(null);
+            Product product = productRepository.findById(command.productId()).orElse(null);
             meterRegistry.counter("db.query", "table", "product").increment();
             
             // 5. 조회 결과 캐싱 (NULL도 캐싱)
@@ -116,7 +114,7 @@ public class ProductService {
                 throw new CoreException(ErrorType.NOT_FOUND, "상품을 찾을 수 없습니다. ID: " + command.productId());
             }
             
-            // Entity를 CacheDto로 변환 후 캐싱
+            // 를 CacheDto로 변환 후 캐싱
             ProductCacheDto cacheDto = ProductCacheDto.from(product);
             log.debug("CacheDto created: id={}, price={}", cacheDto.id(), cacheDto.price());
             String serialized = objectMapper.writeValueAsString(cacheDto);
@@ -135,7 +133,7 @@ public class ProductService {
     /**
      * 상품 목록 조회 - 페이징 (비정규화된 like_count 사용)
      */
-    public Page<ProductEntity> getProductList(ProductCommand.GetList command) {
+    public Page<Product> getProductList(ProductCommand.GetList command) {
         dbCallChecker.incrementDbSelectCount(); // DB 호출 카운트
         Pageable pageable = createPageable(command);
         
@@ -187,7 +185,7 @@ public class ProductService {
             
             // 4. 캐시 미스 - DB에서 조회
             dbCallChecker.incrementDbSelectCount();
-            Optional<BrandEntity> brand = brandRepository.findById(brandId);
+            Optional<Brand> brand = brandRepository.findById(brandId);
             meterRegistry.counter("db.query", "table", "brand").increment();
             
             // 5. 조회 결과 캐싱 (NULL도 캐싱)
@@ -308,40 +306,6 @@ public class ProductService {
             dto,
             stockInfoMap.getOrDefault(dto.productId(), new ProductStockInfo(dto.productId(), 0, false))
         ));
-    }
-    
-    /**
-     * 재고 감소 - 캐시 무효화 포함
-     */
-    @Transactional
-    public void decreaseStock(ProductCommand.DecreaseStock command) {
-        if (!productStockService.isAvailable(command.productId())) {
-            throw new CoreException(ErrorType.CONFLICT, "구매할 수 없는 상품입니다.");
-        }
-        
-        productStockService.decreaseStock(command.productId(), command.quantity());
-        
-        // 캐시 무효화
-        String key = PRODUCT_KEY_PREFIX + command.productId();
-        redisTemplate.delete(key);
-        
-        log.debug("재고 감소 및 캐시 무효화 - productId: {}, quantity: {}", 
-                  command.productId(), command.quantity());
-    }
-    
-    /**
-     * 재고 증가 - 캐시 무효화 포함
-     */
-    @Transactional
-    public void increaseStock(ProductCommand.IncreaseStock command) {
-        productStockService.increaseStock(command.productId(), command.quantity());
-        
-        // 캐시 무효화
-        String key = PRODUCT_KEY_PREFIX + command.productId();
-        redisTemplate.delete(key);
-        
-        log.debug("재고 증가 및 캐시 무효화 - productId: {}, quantity: {}", 
-                  command.productId(), command.quantity());
     }
     
     

@@ -1,6 +1,6 @@
 package com.loopers.application.user;
 
-import com.loopers.domain.user.UserEntity;
+import com.loopers.domain.user.User;
 import com.loopers.domain.user.UserInfo;
 
 public class UserResult {
@@ -8,7 +8,7 @@ public class UserResult {
     public record SignUpResult(
         String userId,
         String name,
-        UserEntity.Gender gender,
+        User.Gender gender,
         String birth,
         String email
     ) {
@@ -26,7 +26,7 @@ public class UserResult {
     public record Detail(
         String userId,
         String name,
-        UserEntity.Gender gender,
+        User.Gender gender,
         String birth,
         String email
     ) {

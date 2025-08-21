@@ -1,16 +1,16 @@
 package com.loopers.infrastructure.dataloader;
 
-import com.loopers.domain.brand.BrandEntity;
+import com.loopers.domain.brand.Brand;
 import com.loopers.domain.common.Money;
-import com.loopers.domain.point.PointEntity;
-import com.loopers.domain.product.ProductEntity;
-import com.loopers.domain.product.ProductStockEntity;
+import com.loopers.domain.point.Point;
+import com.loopers.domain.product.Product;
+import com.loopers.domain.stock.Stock;
 import com.loopers.domain.product.vo.ProductStatus;
-import com.loopers.domain.user.UserEntity;
+import com.loopers.domain.user.User;
 import com.loopers.infrastructure.brand.BrandJpaRepository;
 import com.loopers.infrastructure.point.PointJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
-import com.loopers.infrastructure.product.ProductStockJpaRepository;
+import com.loopers.infrastructure.stock.StockJpaRepository;
 import com.loopers.infrastructure.user.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -40,7 +39,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private final BrandJpaRepository brandRepository;
     private final ProductJpaRepository productRepository;
-    private final ProductStockJpaRepository stockRepository;
+    private final StockJpaRepository stockRepository;
     private final UserJpaRepository userRepository;
     private final PointJpaRepository pointRepository;
     
@@ -95,11 +94,11 @@ public class DataInitializer implements ApplicationRunner {
         long startTime = System.currentTimeMillis();
         
         // 1. 브랜드(IP) 생성
-        List<BrandEntity> brands = createBrands();
+        List<Brand> brands = createBrands();
         log.info("✓ {}개 브랜드(IP) 생성 완료", brands.size());
         
         // 2. 회원 생성
-        List<UserEntity> users = createUsers();
+        List<User> users = createUsers();
         log.info("✓ {}명 회원 생성 완료", users.size());
         
         // 3. 포인트 초기화
@@ -122,11 +121,11 @@ public class DataInitializer implements ApplicationRunner {
         log.info("========================================");
     }
     
-    private List<BrandEntity> createBrands() {
-        List<BrandEntity> brands = new ArrayList<>();
+    private List<Brand> createBrands() {
+        List<Brand> brands = new ArrayList<>();
         
         for (IPBrand ip : IP_BRANDS) {
-            BrandEntity brand = new BrandEntity(
+            Brand brand = new Brand(
                 ip.nameKo,
                 ip.nameEn,
                 String.format("https://goods-shop.com/brands/%s/cover.jpg", 
@@ -140,22 +139,22 @@ public class DataInitializer implements ApplicationRunner {
         return brands;
     }
     
-    private List<UserEntity> createUsers() {
-        List<UserEntity> users = new ArrayList<>();
+    private List<User> createUsers() {
+        List<User> users = new ArrayList<>();
         
         // 테스트용 기본 회원 2명
-        users.add(userRepository.save(new UserEntity(
+        users.add(userRepository.save(new User(
             "test001",
             "테스트유저1",
-            UserEntity.Gender.M,
+            User.Gender.M,
             "1990-01-01",
             "test001@goodsshop.com"
         )));
         
-        users.add(userRepository.save(new UserEntity(
+        users.add(userRepository.save(new User(
             "test002",
             "테스트유저2",
-            UserEntity.Gender.F,
+            User.Gender.F,
             "1995-05-15",
             "test002@goodsshop.com"
         )));
@@ -164,7 +163,7 @@ public class DataInitializer implements ApplicationRunner {
         for (int i = 3; i <= USER_COUNT; i++) {
             String userId = String.format("user%03d", i);
             String name = faker.name().fullName();
-            UserEntity.Gender gender = random.nextBoolean() ? UserEntity.Gender.M : UserEntity.Gender.F;
+            User.Gender gender = random.nextBoolean() ? User.Gender.M : User.Gender.F;
             
             // 생년월일 (1970-2005년생)
             int year = 1970 + random.nextInt(36);
@@ -174,19 +173,19 @@ public class DataInitializer implements ApplicationRunner {
             
             String email = String.format("%s@goodsshop.com", userId);
             
-            UserEntity user = new UserEntity(userId, name, gender, birth, email);
+            User user = new User(userId, name, gender, birth, email);
             users.add(userRepository.save(user));
         }
         
         return users;
     }
     
-    private void createPoints(List<UserEntity> users) {
-        for (UserEntity user : users) {
+    private void createPoints(List<User> users) {
+        for (User user : users) {
             // 포인트 잔액 (0 ~ 500,000원)
             int pointBalance = random.nextInt(501) * 1000;
             
-            PointEntity point = new PointEntity(
+            Point point = new Point(
                 user.getUserId(),
                 Money.of(BigDecimal.valueOf(pointBalance))
             );
@@ -195,16 +194,16 @@ public class DataInitializer implements ApplicationRunner {
         }
     }
     
-    private void createProducts(List<BrandEntity> brands) {
+    private void createProducts(List<Brand> brands) {
         log.info("상품 {}개 생성 시작...", PRODUCT_COUNT);
         
         int batchSize = 1000;
-        List<ProductEntity> productBatch = new ArrayList<>();
-        List<ProductStockEntity> stockBatch = new ArrayList<>();
+        List<Product> productBatch = new ArrayList<>();
+        List<Stock> stockBatch = new ArrayList<>();
         
         for (int i = 0; i < PRODUCT_COUNT; i++) {
             // 랜덤 브랜드(IP) 선택
-            BrandEntity brand = brands.get(random.nextInt(brands.size()));
+            Brand brand = brands.get(random.nextInt(brands.size()));
             IPBrand ipBrand = IP_BRANDS.stream()
                 .filter(ip -> ip.nameKo.equals(brand.getNameKo()))
                 .findFirst()
@@ -239,7 +238,7 @@ public class DataInitializer implements ApplicationRunner {
             Integer releaseYear = generateReleaseYear();
             
             // 상품 엔티티 생성
-            ProductEntity product = new ProductEntity(
+            Product product = new Product(
                 brand.getId(),
                 productName,
                 Money.of(BigDecimal.valueOf(basePrice)),
@@ -253,12 +252,12 @@ public class DataInitializer implements ApplicationRunner {
             
             // 배치 저장
             if (productBatch.size() >= batchSize || i == PRODUCT_COUNT - 1) {
-                List<ProductEntity> savedProducts = productRepository.saveAll(productBatch);
+                List<Product> savedProducts = productRepository.saveAll(productBatch);
                 
                 // 재고 정보 생성
-                for (ProductEntity savedProduct : savedProducts) {
+                for (Product savedProduct : savedProducts) {
                     int stockQuantity = generateStockQuantity(savedProduct.getStatus());
-                    ProductStockEntity stock = new ProductStockEntity(
+                    Stock stock = new Stock(
                         savedProduct.getId(),
                         stockQuantity
                     );

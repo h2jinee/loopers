@@ -11,7 +11,7 @@ public class UserCommand {
     public record Create(
         UserId userId,
         String name,
-        UserEntity.Gender gender,
+        User.Gender gender,
         Birth birth,
         Email email
     ) {

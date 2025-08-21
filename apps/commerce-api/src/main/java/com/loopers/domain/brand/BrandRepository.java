@@ -5,7 +5,7 @@ import java.util.Optional;
 
 public interface BrandRepository {
     
-    Optional<BrandEntity> findById(Long brandId);
+    Optional<Brand> findById(Long brandId);
     
-    List<BrandEntity> findAllById(List<Long> brandIds);
+    List<Brand> findAllById(List<Long> brandIds);
 }

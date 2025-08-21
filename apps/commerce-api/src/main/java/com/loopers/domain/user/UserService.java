@@ -11,14 +11,14 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
     private final UserRepository userRepository;
 
-    public UserEntity createUser(UserCommand.Create command) {
+    public User createUser(UserCommand.Create command) {
         // 1. 사용자 ID 중복 검증
         if (userRepository.existsByUserId(command.userId().value())) {
             throw new CoreException(ErrorType.BAD_REQUEST, "이미 존재하는 ID 입니다.");
         }
 
         // 2. 사용자 엔티티 생성
-        UserEntity user = new UserEntity(
+        User user = new User(
             command.userId().value(),
             command.name(),
             command.gender(),
@@ -30,7 +30,7 @@ public class UserService {
         return userRepository.save(user);
     }
     
-    public UserEntity getUserInfo(UserCommand.GetOne command) {
+    public User getUserInfo(UserCommand.GetOne command) {
         // 사용자 ID로 조회, 없으면 예외 발생
         return userRepository.findByUserId(command.userId())
             .orElseThrow(() -> new CoreException(

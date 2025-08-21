@@ -9,16 +9,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class OrderInfo {
-    
     public record CreateResult(
         Long orderId,
+        String userId,
+        Long productId,
+        Integer quantity,
         BigDecimal totalAmount,
         OrderStatus status,
         ZonedDateTime paymentDeadline
     ) {
-        public static CreateResult from(OrderEntity order) {
+        public static CreateResult from(Order order, Long productId, Integer quantity) {
             return new CreateResult(
                 order.getId(),
+                order.getUserId(),
+                productId,
+                quantity,
                 order.getTotalAmount().amount(),
                 order.getStatus(),
                 order.getPaymentDeadline()
@@ -36,7 +41,7 @@ public class OrderInfo {
         ZonedDateTime paymentDeadline,
         ZonedDateTime orderedAt
     ) {
-        public static Detail from(OrderEntity order) {
+        public static Detail from(Order order) {
             List<OrderLineInfo> lines = order.getOrderLines().stream()
                 .map(OrderLineInfo::from)
                 .collect(Collectors.toList());
@@ -62,10 +67,10 @@ public class OrderInfo {
         String firstItemName,
         ZonedDateTime orderedAt
     ) {
-        public static Summary from(OrderEntity order) {
+        public static Summary from(Order order) {
             int itemCount = order.getOrderLines().size();
             String firstItemName = order.getOrderLines().isEmpty() ? "" 
-                : order.getOrderLines().get(0).getProductName();
+                : order.getOrderLines().getFirst().getProductName();
                 
             if (itemCount > 1) {
                 firstItemName += " 외 " + (itemCount - 1) + "건";
@@ -90,7 +95,7 @@ public class OrderInfo {
         BigDecimal price,
         BigDecimal subtotal
     ) {
-        public static OrderLineInfo from(OrderLineEntity line) {
+        public static OrderLineInfo from(OrderLine line) {
             return new OrderLineInfo(
                 line.getId(),
                 line.getProductId(),

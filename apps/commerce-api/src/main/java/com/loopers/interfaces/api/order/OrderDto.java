@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class OrderDto {
-    
     public static class V1 {
         
         public static class Create {
@@ -37,15 +36,6 @@ public class OrderDto {
                 
                 String receiverAddressDetail
             ) {
-                public ReceiverInfo toReceiverInfo() {
-                    return new ReceiverInfo(
-                        receiverName,
-                        receiverPhone,
-                        receiverZipCode,
-                        receiverAddress,
-                        receiverAddressDetail
-                    );
-                }
             }
             
             public record Response(
@@ -151,6 +141,42 @@ public class OrderDto {
                         summary.firstItemName(),
                         summary.orderedAt()
                     );
+                }
+            }
+        }
+
+        public static class UpdateStatus {
+            public record Request(
+                @NotBlank(message = "주문 상태는 필수입니다.")
+                String status
+            ) {}
+        }
+        
+        public static class Statistics {
+            public record Response(
+                Long totalOrderCount,
+                Long totalOrderAmount,
+                ZonedDateTime lastOrderDate
+            ) {
+                public static Response from(OrderResult.Statistics statistics) {
+                    return new Response(
+                        statistics.totalOrderCount(),
+                        statistics.totalOrderAmount(),
+                        statistics.lastOrderDate()
+                    );
+                }
+            }
+        }
+        
+        public static class RecentOrders {
+            public record Response(
+                List<GetList.Response> orders
+            ) {
+                public static Response from(OrderResult.RecentOrders recentOrders) {
+                    var orderList = recentOrders.orders().stream()
+                        .map(GetList.Response::from)
+                        .toList();
+                    return new Response(orderList);
                 }
             }
         }

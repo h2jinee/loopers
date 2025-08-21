@@ -49,13 +49,13 @@ public class UserServiceIntegrationTest {
 			UserCommand.Create command = new UserCommand.Create(
 				new UserId("h2jinee"),
 				"전희진",
-				UserEntity.Gender.F,
+				User.Gender.F,
 				new Birth("1997-01-18"),
 				new Email("wjsgmlwls97@gmail.com")
 			);
 
 			// act
-			UserEntity savedUser = userService.createUser(command);
+			User savedUser = userService.createUser(command);
 
 			// assert
 			assertThat(savedUser).isNotNull();
@@ -64,7 +64,7 @@ public class UserServiceIntegrationTest {
 			assertThat(savedUser.getEmail()).isEqualTo("wjsgmlwls97@gmail.com");
 			assertThat(savedUser.getBirth()).isEqualTo("1997-01-18");
 
-			verify(userJpaRepository, times(1)).save(any(UserEntity.class));
+			verify(userJpaRepository, times(1)).save(any(User.class));
 		}
 
 		@DisplayName("이미 가입된 ID 로 회원가입 시도 시, 실패한다.")
@@ -74,7 +74,7 @@ public class UserServiceIntegrationTest {
 			UserCommand.Create user = new UserCommand.Create(
 				new UserId("h2jinee"),
 				"전희진",
-				UserEntity.Gender.F,
+				User.Gender.F,
 				new Birth("1997-01-18"),
 				new Email("wjsgmlwls97@gmail.com")
 			);
@@ -82,7 +82,7 @@ public class UserServiceIntegrationTest {
 			UserCommand.Create newUser = new UserCommand.Create(
 				new UserId("h2jinee"),
 				"김데빈",
-				UserEntity.Gender.M,
+				User.Gender.M,
 				new Birth("2000-01-01"),
 				new Email("devin@loopers.com")
 			);
@@ -113,15 +113,15 @@ public class UserServiceIntegrationTest {
 			UserCommand.Create command = new UserCommand.Create(
 				new UserId("h2jinee"),
 				"전희진",
-				UserEntity.Gender.F,
+				User.Gender.F,
 				new Birth("1997-01-18"),
 				new Email("wjsgmlwls97@gmail.com")
 			);
-			UserEntity user = userService.createUser(command);
+			User user = userService.createUser(command);
 
 			// act
 			UserCommand.GetOne getCommand = new UserCommand.GetOne("h2jinee");
-			UserEntity foundUser = userService.getUserInfo(getCommand);
+			User foundUser = userService.getUserInfo(getCommand);
 
 			// assert
 			assertThat(foundUser).isNotNull();
@@ -137,7 +137,7 @@ public class UserServiceIntegrationTest {
 			UserCommand.Create command = new UserCommand.Create(
 				new UserId("h2jinee"),
 				"전희진",
-				UserEntity.Gender.F,
+				User.Gender.F,
 				new Birth("1997-01-18"),
 				new Email("wjsgmlwls97@gmail.com")
 			);

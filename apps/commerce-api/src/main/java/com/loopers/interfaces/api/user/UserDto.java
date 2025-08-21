@@ -1,6 +1,6 @@
 package com.loopers.interfaces.api.user;
 
-import com.loopers.domain.user.UserEntity;
+import com.loopers.domain.user.User;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
@@ -22,7 +22,7 @@ public class UserDto {
                 String name,
 
                 @NotNull
-                UserEntity.Gender gender,
+                User.Gender gender,
 
                 @NotNull
                 @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "생년월일은 yyyy-MM-dd 형식")
@@ -38,7 +38,7 @@ public class UserDto {
             public record Response(
                 String userId,
                 String name,
-				UserEntity.Gender gender,
+				User.Gender gender,
 				String birth,
                 String email
             ) {
@@ -59,7 +59,7 @@ public class UserDto {
             public record Response(
                 String userId,
                 String name,
-                UserEntity.Gender gender,
+                User.Gender gender,
                 String birth,
                 String email
             ) {

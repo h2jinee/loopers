@@ -1,6 +1,6 @@
 package com.loopers.infrastructure.order;
 
-import com.loopers.domain.order.OrderEntity;
+import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,17 +16,17 @@ public class OrderRepositoryImpl implements OrderRepository {
     private final OrderJpaRepository orderJpaRepository;
     
     @Override
-    public OrderEntity save(OrderEntity order) {
+    public Order save(Order order) {
         return orderJpaRepository.save(order);
     }
-    
+
     @Override
-    public Optional<OrderEntity> findByIdAndUserId(Long orderId, String userId) {
+    public Optional<Order> findByIdAndUserId(Long orderId, String userId) {
         return orderJpaRepository.findByIdAndUserId(orderId, userId);
     }
     
     @Override
-    public Page<OrderEntity> findByUserId(String userId, Pageable pageable) {
+    public Page<Order> findByUserId(String userId, Pageable pageable) {
         return orderJpaRepository.findByUserId(userId, pageable);
     }
 }

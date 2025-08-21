@@ -16,7 +16,7 @@ public record ProductCacheDto(
     Long likeCount,
     ZonedDateTime createdAt
 ) {
-    public static ProductCacheDto from(ProductEntity entity) {
+    public static ProductCacheDto from(Product entity) {
         return new ProductCacheDto(
             entity.getId(),
             entity.getBrandId(),

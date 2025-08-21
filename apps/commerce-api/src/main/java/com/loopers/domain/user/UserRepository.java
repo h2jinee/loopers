@@ -6,7 +6,7 @@ public interface UserRepository {
     
     boolean existsByUserId(String userId);
     
-    UserEntity save(UserEntity user);
+    User save(User user);
     
-    Optional<UserEntity> findByUserId(String userId);
+    Optional<User> findByUserId(String userId);
 }

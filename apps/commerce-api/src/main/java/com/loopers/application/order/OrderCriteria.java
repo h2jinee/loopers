@@ -14,6 +14,26 @@ public class OrderCriteria {
         public OrderCommand.Create toCommand() {
             return new OrderCommand.Create(userId, productId, quantity, receiverInfo);
         }
+        
+        public static Create from(
+            String userId,
+            Long productId,
+            Integer quantity,
+            String receiverName,
+            String receiverPhone,
+            String receiverZipCode,
+            String receiverAddress,
+            String receiverAddressDetail
+        ) {
+            ReceiverInfo receiverInfo = new ReceiverInfo(
+                receiverName,
+                receiverPhone,
+                receiverZipCode,
+                receiverAddress,
+                receiverAddressDetail
+            );
+            return new Create(userId, productId, quantity, receiverInfo);
+        }
     }
     
     public record GetDetail(
@@ -32,6 +52,26 @@ public class OrderCriteria {
     ) {
         public OrderCommand.GetList toCommand() {
             return OrderCommand.GetList.of(userId, page, size);
+        }
+    }
+    
+    public record Cancel(
+        String userId,
+        Long orderId,
+        String reason
+    ) {
+        public OrderCommand.Cancel toCommand() {
+            return new OrderCommand.Cancel(userId, orderId, reason);
+        }
+    }
+    
+    public record UpdateStatus(
+        Long orderId,
+        String newStatus,
+        String adminId
+    ) {
+        public OrderCommand.UpdateStatus toCommand() {
+            return new OrderCommand.UpdateStatus(orderId, newStatus, adminId);
         }
     }
 }
