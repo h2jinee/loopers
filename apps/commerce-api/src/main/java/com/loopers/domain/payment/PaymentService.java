@@ -7,7 +7,11 @@ import com.loopers.domain.payment.result.PgPaymentResult;
 import com.loopers.domain.payment.vo.CardInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.time.ZonedDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -45,6 +49,9 @@ public class PaymentService {
         if (result.isSuccess()) {
             payment.complete();
             log.info("PG 결제 완료: orderId={}, transactionId={}", orderId, result.transactionId());
+        } else if (result.isPending()) {
+            log.info("PG 결제 대기중: orderId={}, transactionId={}, reason={}", 
+                orderId, result.transactionId(), result.failureReason());
         } else {
             payment.fail(result.failureReason());
             log.warn("PG 결제 실패: orderId={}, reason={}", orderId, result.failureReason());
@@ -103,6 +110,26 @@ public class PaymentService {
         payment.fail(reason);
         paymentRepository.save(payment);
         log.warn("결제 실패 처리: transactionId={}, reason={}", transactionId, reason);
+    }
+    
+    /**
+     * 특정 시간 이전에 생성된 PENDING 상태의 결제 정보 조회
+     */
+    public List<PaymentInfo.Pending> findPendingPayments(ZonedDateTime dateTime) {
+        return paymentRepository.findByStatusAndCreatedBefore(PaymentStatus.PENDING, dateTime, Pageable.unpaged())
+            .stream()
+            .map(PaymentInfo.Pending::from)
+            .toList();
+    }
+    
+    /**
+     * 타임아웃 처리 대상 결제 정보 조회
+     */
+    public List<PaymentInfo.Timeout> findTimeoutPayments(ZonedDateTime dateTime) {
+        return paymentRepository.findByStatusAndCreatedBefore(PaymentStatus.PENDING, dateTime, Pageable.unpaged())
+            .stream()
+            .map(PaymentInfo.Timeout::from)
+            .toList();
     }
     
 }

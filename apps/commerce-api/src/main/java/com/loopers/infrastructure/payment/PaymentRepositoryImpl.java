@@ -2,9 +2,13 @@ package com.loopers.infrastructure.payment;
 
 import com.loopers.domain.payment.Payment;
 import com.loopers.domain.payment.PaymentRepository;
+import com.loopers.domain.payment.PaymentStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,5 +36,10 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     @Override
     public List<Payment> findByUserId(String userId) {
         return jpaRepository.findByUserId(userId);
+    }
+    
+    @Override
+    public Page<Payment> findByStatusAndCreatedBefore(PaymentStatus status, ZonedDateTime dateTime, Pageable pageable) {
+        return jpaRepository.findByStatusAndCreatedAtBefore(status, dateTime, pageable);
     }
 }

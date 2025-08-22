@@ -1,11 +1,22 @@
 package com.loopers.application.payment;
 
+import com.loopers.domain.order.OrderService;
+import com.loopers.domain.payment.PaymentInfo;
+import com.loopers.domain.payment.PaymentService;
+import com.loopers.domain.payment.port.PaymentGatewayPort;
+import com.loopers.domain.payment.result.TransactionStatusResult;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -14,20 +25,21 @@ import java.util.concurrent.TimeUnit;
 public class PaymentFacade {
     
     private final PaymentProcessor paymentProcessor;
+    private final PaymentService paymentService;
+    private final OrderService orderService;
+    private final PaymentGatewayPort paymentGatewayPort;
     private final RedisTemplate<String, String> redisTemplate;
     
     private static final String RESULT_KEY_PREFIX = "payment:result:";
-    private static final String RETRY_KEY_PREFIX = "payment:result:retry:";
     private static final long RESULT_TTL_MINUTES = 10;
     
     /**
      * PG 결제 결과 처리 - 비동기 처리
-     * Redis 멱등성 체크와 재시도 로직 포함
+     * Redis 멱등성 체크와 Resilience4j 재시도 로직 포함
      */
     @Async
     public void processPaymentResult(PaymentResultCommand command) {
         String resultKey = RESULT_KEY_PREFIX + command.transactionKey();
-        String retryKey = RETRY_KEY_PREFIX + command.transactionKey();
         
         // 1. 중복 결과 처리 체크
         Boolean isProcessed = redisTemplate.opsForValue()
@@ -39,8 +51,8 @@ public class PaymentFacade {
         }
         
         try {
-            // 2. 결제 결과 처리 시도 (재시도 포함)
-            processPaymentResultWithRetry(command, retryKey);
+            // 2. 결제 결과 처리 시도 (Resilience4j Retry 적용)
+            processPaymentResultWithRetry(command);
             
             // 3. 처리 완료 표시
             redisTemplate.opsForValue().set(resultKey, "completed", RESULT_TTL_MINUTES, TimeUnit.MINUTES);
@@ -54,46 +66,91 @@ public class PaymentFacade {
     }
     
     /**
-     * 1회 재시도 로직
+     * Resilience4j Retry를 사용한 결제 결과 처리
+     * payment-result-process 설정 사용
      */
-    private void processPaymentResultWithRetry(PaymentResultCommand command, String retryKey) {
-        try {
-            // 첫 번째 시도
-            paymentProcessor.processPaymentResult(command);
-            log.info("결제 결과 처리 성공: transactionKey={}", command.transactionKey());
-            
-        } catch (Exception e) {
-            log.warn("결제 결과 처리 실패, 재시도 예정: transactionKey={}, error={}", 
-                command.transactionKey(), e.getMessage());
-            
-            // 재시도 카운트 확인
-            String retryCount = redisTemplate.opsForValue().get(retryKey);
-            if (retryCount != null && Integer.parseInt(retryCount) >= 1) {
-                log.error("재시도 횟수 초과: transactionKey={}", command.transactionKey());
-                throw new RuntimeException("결제 결과 처리 재시도 횟수 초과", e);
-            }
-            
-            // 재시도 카운트 증가
-            redisTemplate.opsForValue().increment(retryKey);
-            redisTemplate.expire(retryKey, RESULT_TTL_MINUTES, TimeUnit.MINUTES);
-            
-            // 1초 대기 후 재시도
+    @Retry(name = "payment-result-process", fallbackMethod = "processPaymentResultFallback")
+    private void processPaymentResultWithRetry(PaymentResultCommand command) {
+        paymentProcessor.processPaymentResult(command);
+        log.info("결제 결과 처리 성공: transactionKey={}", command.transactionKey());
+    }
+    
+    /**
+     * 재시도 실패 시 Fallback 메서드
+     */
+    private void processPaymentResultFallback(PaymentResultCommand command, Exception ex) {
+        log.error("결제 결과 처리 재시도 모두 실패: transactionKey={}, error={}", 
+            command.transactionKey(), ex.getMessage());
+        throw new CoreException(ErrorType.INTERNAL_ERROR, "결제 결과 처리 재시도 횟수 초과: " + command.transactionKey());
+    }
+    
+    /**
+     * PENDING 상태의 결제를 PG에서 확인하여 동기화
+     */
+    @Transactional
+    public int synchronizePendingPayments(ZonedDateTime beforeTime) {
+        List<PaymentInfo.Pending> pendingPayments = paymentService.findPendingPayments(beforeTime);
+        int updatedCount = 0;
+        
+        for (PaymentInfo.Pending payment : pendingPayments) {
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("재시도 대기 중 인터럽트", ie);
-            }
-            
-            try {
-                paymentProcessor.processPaymentResult(command);
-                log.info("결제 결과 재시도 성공: transactionKey={}", command.transactionKey());
-                
-            } catch (Exception retryException) {
-                log.error("결제 결과 재시도 실패: transactionKey={}", command.transactionKey(), retryException);
-                throw retryException;
+                if (synchronizePaymentStatus(payment)) {
+                    updatedCount++;
+                }
+            } catch (Exception e) {
+                log.error("결제 상태 동기화 실패: paymentId={}", payment.paymentId(), e);
             }
         }
+        
+        return updatedCount;
+    }
+    
+    /**
+     * 개별 결제 상태를 PG에서 확인하여 동기화
+     */
+    private boolean synchronizePaymentStatus(PaymentInfo.Pending payment) {
+        String transactionKey = payment.transactionId();
+        if (transactionKey == null || transactionKey.isBlank()) {
+            return false;
+        }
+        
+        try {
+            // PG에서 실제 상태 조회
+            TransactionStatusResult result = paymentGatewayPort.getTransactionStatus(payment.userId(), transactionKey);
+            
+            if (result.isSuccess()) {
+                paymentService.completePayment(transactionKey);
+                orderService.updateOrderStatusToPaid(payment.orderId());
+                return true;
+            } else if (result.isFailed()) {
+                paymentService.failPayment(transactionKey, result.reason());
+                orderService.updateOrderStatusToPaymentFailed(payment.orderId());
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("PG 상태 조회 실패: transactionKey={}", transactionKey, e);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 타임아웃된 PENDING 결제를 실패 처리
+     */
+    @Transactional
+    public int failTimeoutPayments(ZonedDateTime beforeTime) {
+        List<PaymentInfo.Timeout> timeoutPayments = paymentService.findTimeoutPayments(beforeTime);
+        
+        for (PaymentInfo.Timeout payment : timeoutPayments) {
+            try {
+                paymentService.failPayment(payment.transactionId(), "결제 처리 시간 초과");
+                orderService.updateOrderStatusToPaymentFailed(payment.orderId());
+            } catch (Exception e) {
+                log.error("타임아웃 결제 처리 실패: paymentId={}", payment.paymentId(), e);
+            }
+        }
+        
+        return timeoutPayments.size();
     }
     
 }

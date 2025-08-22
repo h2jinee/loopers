@@ -97,19 +97,19 @@ public class Payment extends BaseEntity {
         this.status = PaymentStatus.FAILED;
         this.failureReason = reason;
     }
-    
+
     /**
-     * 결제 취소 처리
+     * 트랜잭션 ID 업데이트 (TEMP ID를 실제 ID로 교체)
      */
-    public void cancel() {
-        if (this.status != PaymentStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 결제만 취소할 수 있습니다.");
+    public void updateTransactionId(String transactionId) {
+        if (transactionId == null || transactionId.isBlank()) {
+            throw new IllegalArgumentException("트랜잭션 ID는 필수입니다.");
         }
-        this.status = PaymentStatus.CANCELLED;
+        this.transactionId = transactionId;
     }
     
-    public Money getAmount() {
-        return amount;
+    public void setTransactionId(String transactionId) {
+        updateTransactionId(transactionId);
     }
     
     public boolean isCompleted() {
@@ -119,8 +119,8 @@ public class Payment extends BaseEntity {
     public boolean isFailed() {
         return this.status == PaymentStatus.FAILED;
     }
-    
-    public boolean isCancelled() {
-        return this.status == PaymentStatus.CANCELLED;
+
+    public boolean isPending() {
+        return this.status == PaymentStatus.PENDING;
     }
 }

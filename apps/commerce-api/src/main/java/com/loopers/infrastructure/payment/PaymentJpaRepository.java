@@ -1,8 +1,12 @@
 package com.loopers.infrastructure.payment;
 
 import com.loopers.domain.payment.Payment;
+import com.loopers.domain.payment.PaymentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,9 +14,7 @@ public interface PaymentJpaRepository extends JpaRepository<Payment, Long> {
     
     Optional<Payment> findByTransactionId(String transactionId);
     
-    Optional<Payment> findByOrderIdAndTransactionId(Long orderId, String transactionId);
-    
-    List<Payment> findByOrderId(Long orderId);
-    
     List<Payment> findByUserId(String userId);
+    
+    Page<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, ZonedDateTime dateTime, Pageable pageable);
 }

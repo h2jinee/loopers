@@ -16,9 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.EnableRetry;
-import org.springframework.retry.annotation.Retryable;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
+import java.time.Duration;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@EnableRetry
 @SpringBootTest
 class LikeConcurrencyTest {
 
@@ -319,21 +319,27 @@ class LikeConcurrencyTest {
         }
 
         @Transactional
-        @Retryable(
-            retryFor = ObjectOptimisticLockingFailureException.class,
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 100)
-        )
         public boolean addLikeOptimistic(String userId, Long productId) {
-            LikeCommand.Toggle command = new LikeCommand.Toggle(userId, productId);
-            boolean added = likeService.addLike(command);
+            // Resilience4j Retry 설정
+            RetryConfig config = RetryConfig.custom()
+                .maxAttempts(3)
+                .waitDuration(Duration.ofMillis(100))
+                .retryOnException(e -> e instanceof ObjectOptimisticLockingFailureException)
+                .build();
             
-            if (added) {
-                // 테스트 전용 Service 계층을 통해 처리
-                testProductCountService.incrementLikeCountWithOptimisticLock(productId);
-                return true;
-            }
-            return false;
+            Retry retry = Retry.of("testOptimisticRetry", config);
+            
+            return Retry.decorateSupplier(retry, () -> {
+                LikeCommand.Toggle command = new LikeCommand.Toggle(userId, productId);
+                boolean added = likeService.addLike(command);
+                
+                if (added) {
+                    // 테스트 전용 Service 계층을 통해 처리
+                    testProductCountService.incrementLikeCountWithOptimisticLock(productId);
+                    return true;
+                }
+                return false;
+            }).get();
         }
 
         @Transactional

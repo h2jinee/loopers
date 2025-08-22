@@ -22,9 +22,6 @@ dependencies {
     // feign
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     
-    // retry
-    implementation("org.springframework.retry:spring-retry")
-
     // querydsl
     implementation("com.querydsl:querydsl-jpa::jakarta")
 

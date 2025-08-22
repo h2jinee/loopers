@@ -52,6 +52,10 @@ pg:
   simulator:
     url: http://localhost:8082
 
+payment:
+  callback:
+    url: ${PAYMENT_CALLBACK_URL:http://localhost:8080/api/v1/payments/callback}
+
 resilience4j:
   circuitbreaker:
     instances:
@@ -93,12 +97,19 @@ resilience4j:
           - java.lang.RuntimeException
           - java.util.concurrent.TimeoutException
           - feign.RetryableException
+      payment-result-process:
+        max-attempts: 2
+        wait-duration: 1s
+        retry-exceptions:
+          - java.lang.RuntimeException
+          - org.springframework.dao.DataAccessException
+          - org.springframework.transaction.TransactionException
 
 management:
   endpoints:
     web:
       exposure:
-        include: health, metrics, prometheus, circuitbreakerevents
+        include: health, metrics, prometheus, circuitbreaker
 
   metrics:
     enable:
@@ -110,11 +121,19 @@ spring:
     activate:
       on-profile: local, test
 
+payment:
+  callback:
+    url: http://localhost:8080/api/v1/payments/callback
+
 ---
 spring:
   config:
     activate:
       on-profile: dev
+
+payment:
+  callback:
+    url: https://dev-api.loopers.com/api/v1/payments/callback
 
 ---
 spring:
@@ -122,11 +141,19 @@ spring:
     activate:
       on-profile: qa
 
+payment:
+  callback:
+    url: https://qa-api.loopers.com/api/v1/payments/callback
+
 ---
 spring:
   config:
     activate:
       on-profile: prd
+
+payment:
+  callback:
+    url: https://api.loopers.com/api/v1/payments/callback
 
 springdoc:
   api-docs:
