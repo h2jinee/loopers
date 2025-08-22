@@ -47,7 +47,7 @@ public class DataInitializer implements ApplicationRunner {
     private final Faker faker = new Faker(Locale.KOREA);
     
     // 설정값
-    private static final int PRODUCT_COUNT = 100000;
+    private static final int PRODUCT_COUNT = 1000; // 테스트를 위해 줄임
     private static final int USER_COUNT = 100;
 
     // IP 브랜드 정보
@@ -197,7 +197,7 @@ public class DataInitializer implements ApplicationRunner {
     private void createProducts(List<Brand> brands) {
         log.info("상품 {}개 생성 시작...", PRODUCT_COUNT);
         
-        int batchSize = 1000;
+        int batchSize = 100; // 배치 사이즈를 줄임
         List<Product> productBatch = new ArrayList<>();
         List<Stock> stockBatch = new ArrayList<>();
         
@@ -253,6 +253,7 @@ public class DataInitializer implements ApplicationRunner {
             // 배치 저장
             if (productBatch.size() >= batchSize || i == PRODUCT_COUNT - 1) {
                 List<Product> savedProducts = productRepository.saveAll(productBatch);
+                productRepository.flush(); // 명시적으로 flush
                 
                 // 재고 정보 생성
                 for (Product savedProduct : savedProducts) {
@@ -264,7 +265,10 @@ public class DataInitializer implements ApplicationRunner {
                     stockBatch.add(stock);
                 }
                 
-                stockRepository.saveAll(stockBatch);
+                if (!stockBatch.isEmpty()) {
+                    stockRepository.saveAll(stockBatch);
+                    stockRepository.flush(); // 명시적으로 flush
+                }
                 
                 if ((i + 1) % 10000 == 0) {
                     log.info("  {}개 상품 생성 진행중...", i + 1);
