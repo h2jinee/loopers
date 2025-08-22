@@ -17,17 +17,8 @@ public class UserService {
             throw new CoreException(ErrorType.BAD_REQUEST, "이미 존재하는 ID 입니다.");
         }
 
-        // 2. 사용자 엔티티 생성
-        User user = new User(
-            command.userId().value(),
-            command.name(),
-            command.gender(),
-            command.birth().value(),
-            command.email().value()
-        );
-
-        // 3. 사용자 정보 저장
-        return userRepository.save(user);
+        // 2. 사용자 엔티티 생성 및 저장
+        return userRepository.save(User.create(command));
     }
     
     public User getUserInfo(UserCommand.GetOne command) {

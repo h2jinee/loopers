@@ -1,7 +1,11 @@
 package com.loopers.application.order;
 
+import com.loopers.domain.common.Money;
+import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderCommand;
 import com.loopers.domain.order.vo.ReceiverInfo;
+import com.loopers.domain.payment.PaymentCommand;
+import com.loopers.domain.payment.PgPaymentInfo;
 
 public class OrderCriteria {
     
@@ -9,30 +13,60 @@ public class OrderCriteria {
         String userId,
         Long productId,
         Integer quantity,
-        ReceiverInfo receiverInfo
+        ReceiverInfo receiverInfo,
+        Money pointToUse,  // 사용할 포인트 (null 또는 0이면 미사용)
+        PgPaymentInfo pgInfo  // PG 결제 정보 (포인트 전액 결제시 null 가능)
     ) {
-        public OrderCommand.Create toCommand() {
+        public OrderCommand.Create toOrderCommand() {
             return new OrderCommand.Create(userId, productId, quantity, receiverInfo);
         }
         
-        public static Create from(
+        public PaymentCommand.Point toPointPaymentCommand(Order order) {
+            return new PaymentCommand.Point(
+                order.getId(),
+                userId,
+                pointToUse
+            );
+        }
+        
+        public PaymentCommand.Pg toPgPaymentCommand(Order order, Money amount) {
+            return new PaymentCommand.Pg(
+                order.getId(),
+                userId,
+                amount,
+                pgInfo
+            );
+        }
+        
+        public static Create withoutPoint(
             String userId,
             Long productId,
             Integer quantity,
-            String receiverName,
-            String receiverPhone,
-            String receiverZipCode,
-            String receiverAddress,
-            String receiverAddressDetail
+            ReceiverInfo receiverInfo,
+            PgPaymentInfo pgInfo
         ) {
-            ReceiverInfo receiverInfo = new ReceiverInfo(
-                receiverName,
-                receiverPhone,
-                receiverZipCode,
-                receiverAddress,
-                receiverAddressDetail
-            );
-            return new Create(userId, productId, quantity, receiverInfo);
+            return new Create(userId, productId, quantity, receiverInfo, null, pgInfo);
+        }
+        
+        public static Create withPoint(
+            String userId,
+            Long productId,
+            Integer quantity,
+            ReceiverInfo receiverInfo,
+            Money pointToUse,
+            PgPaymentInfo pgInfo
+        ) {
+            return new Create(userId, productId, quantity, receiverInfo, pointToUse, pgInfo);
+        }
+        
+        public static Create pointOnly(
+            String userId,
+            Long productId,
+            Integer quantity,
+            ReceiverInfo receiverInfo,
+            Money pointToUse
+        ) {
+            return new Create(userId, productId, quantity, receiverInfo, pointToUse, null);
         }
     }
     

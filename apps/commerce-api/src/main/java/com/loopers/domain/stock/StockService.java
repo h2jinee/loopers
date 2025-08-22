@@ -1,11 +1,63 @@
 package com.loopers.domain.stock;
 
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class StockService {
+    
+    private final StockRepository stockRepository;
+    private final StockReservationRepository stockReservationRepository;
+    
+    /**
+     * 단일 재고 정보 조회
+     */
+    public StockInfo getStockInfo(Long productId) {
+        return stockRepository.findByProductId(productId)
+            .map(this::toStockInfo)
+            .orElse(new StockInfo(productId, 0, false));
+    }
+    
+    /**
+     * 여러 상품의 재고 정보 벌크 조회
+     */
+    public Map<Long, StockInfo> getStockInfosByProductIds(List<Long> productIds) {
+        List<Stock> stocks = stockRepository.findByProductIdIn(productIds);
+        
+        Map<Long, StockInfo> stockMap = stocks.stream()
+            .collect(Collectors.toMap(
+                Stock::getProductId,
+                this::toStockInfo
+            ));
+        
+        productIds.forEach(productId -> 
+            stockMap.computeIfAbsent(productId, 
+                id -> new StockInfo(id, 0, false))
+        );
+        
+        return stockMap;
+    }
+    
+    /**
+     * Stock Entity를 StockInfo로 변환
+     */
+    private StockInfo toStockInfo(Stock stock) {
+        return new StockInfo(
+            stock.getProductId(),
+            stock.getQuantity(),
+            stock.isAvailable(1)
+        );
+    }
     
     /**
      * 재고 차감 비즈니스 로직
@@ -22,20 +74,6 @@ public class StockService {
     }
     
     /**
-     * 재고 조정 비즈니스 로직
-     */
-    public void processAdjustment(Stock stock, Integer newQuantity) {
-        stock.adjust(newQuantity);
-    }
-    
-    /**
-     * 재고 생성
-     */
-    public Stock createNewStock(Long productId, Integer initialQuantity) {
-        return new Stock(productId, initialQuantity);
-    }
-    
-    /**
      * 구매 가능 여부 확인
      */
     public boolean isAvailable(Stock stock, Integer requestedQuantity) {
@@ -48,8 +86,10 @@ public class StockService {
     /**
      * 재고 예약 생성
      */
-    public StockReservation createReservation(Long orderId, Long productId, Integer quantity) {
-        return new StockReservation(orderId, productId, quantity);
+    @Transactional
+    public void createReservation(Long orderId, Long productId, Integer quantity) {
+        StockReservation reservation = new StockReservation(orderId, productId, quantity);
+        stockReservationRepository.save(reservation);
     }
     
     /**
@@ -67,19 +107,53 @@ public class StockService {
     }
     
     /**
-     * 예약된 총 수량 계산 (RESERVED 상태만)
+     * 재고 차감 (비관적 락 사용)
      */
-    public Integer calculateReservedQuantity(List<StockReservation> reservations) {
-        return reservations.stream()
-            .filter(StockReservation::isReserved)
-            .mapToInt(StockReservation::getQuantity)
-            .sum();
+    @Transactional
+    public void decreaseStock(Long productId, Integer quantity) {
+        Stock stock = stockRepository.findByProductIdWithLock(productId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
+                "재고 정보를 찾을 수 없습니다. productId: " + productId));
+        
+        processDecrease(stock, quantity);
+        stockRepository.save(stock);
+        
+        log.info("재고 차감 완료 - productId: {}, quantity: {}", productId, quantity);
+    }
+    
+    
+    /**
+     * 재고 예약 확정
+     */
+    @Transactional
+    public void confirmReservations(Long orderId) {
+        List<StockReservation> reservations = stockReservationRepository.findByOrderId(orderId);
+        confirmReservations(reservations);
+        stockReservationRepository.saveAll(reservations);
+        
+        log.info("재고 예약 확정 완료 - orderId: {}", orderId);
     }
     
     /**
-     * 실제 가용 재고 계산 (전체 재고 - 예약된 재고)
+     * 재고 예약 취소 및 재고 복원
      */
-    public Integer calculateAvailableStock(Integer totalStock, Integer reservedStock) {
-        return totalStock - reservedStock;
+    @Transactional
+    public void cancelReservationsAndRestoreStock(Long orderId) {
+        List<StockReservation> reservations = stockReservationRepository.findByOrderId(orderId);
+        
+        cancelReservations(reservations);
+        stockReservationRepository.saveAll(reservations);
+        
+        for (StockReservation reservation : reservations) {
+            if (reservation.isCancelled()) {
+                Stock stock = stockRepository.findByProductIdWithLock(reservation.getProductId())
+                    .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
+                        "재고 정보를 찾을 수 없습니다. productId: " + reservation.getProductId()));
+                processIncrease(stock, reservation.getQuantity());
+                stockRepository.save(stock);
+            }
+        }
+        
+        log.info("재고 예약 취소 및 복원 완료 - orderId: {}", orderId);
     }
 }

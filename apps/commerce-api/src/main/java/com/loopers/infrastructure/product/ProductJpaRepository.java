@@ -10,9 +10,6 @@ import org.springframework.stereotype.Repository;
 
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductWithBrandDto;
-import com.loopers.domain.product.ProductStockInfo;
-
-import java.util.List;
 
 @Repository
 public interface ProductJpaRepository extends JpaRepository<Product, Long> {
@@ -54,25 +51,4 @@ public interface ProductJpaRepository extends JpaRepository<Product, Long> {
     @Modifying
     @Query("UPDATE Product p SET p.likeCount = CASE WHEN p.likeCount > 0 THEN p.likeCount - 1 ELSE 0 END WHERE p.id = :productId")
     void decrementLikeCount(@Param("productId") Long productId);
-    
-    @Modifying
-    @Query("""
-        UPDATE Product p 
-        SET p.likeCount = (
-            SELECT COUNT(*) FROM Like l 
-            WHERE l.productId = p.id
-        )
-        WHERE p.id = :productId
-        """)
-    void syncLikeCount(@Param("productId") Long productId);
-
-    // TODO
-    @Query("""
-        SELECT new com.loopers.domain.product.ProductStockInfo(
-            ps.productId, ps.stock
-        )
-        FROM Stock ps
-        WHERE ps.productId IN :productIds
-        """)
-    List<ProductStockInfo> findProductStockInfoByIds(@Param("productIds") List<Long> productIds);
 }

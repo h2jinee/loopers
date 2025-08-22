@@ -29,5 +29,19 @@ public class LikeResult {
         Long likeCount,
         boolean isAvailable,
         ZonedDateTime likedAt
-    ) {}
+    ) {
+        public static LikedProduct from(LikeInfo.LikedProduct domainInfo) {
+            return new LikedProduct(
+                domainInfo.productId(),
+                domainInfo.brandId(),
+                domainInfo.brandNameKo(),
+                domainInfo.productNameKo(),
+                domainInfo.description(),
+                domainInfo.price(),
+                domainInfo.likeCount(),
+                domainInfo.isAvailable(),
+                domainInfo.likedAt()
+            );
+        }
+    }
 }

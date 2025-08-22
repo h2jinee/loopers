@@ -59,30 +59,9 @@ public class PointInfo {
             );
         }
     }
-    
+
     /**
-     * 포인트 사용 결과
-     */
-    public record UseResult(
-        String userId,
-        BigDecimal usedAmount,
-        BigDecimal remainingBalance,
-        Long orderId,
-        ZonedDateTime usedAt
-    ) {
-        public static UseResult from(Point point, PointHistory history) {
-            return new UseResult(
-                point.getUserId(),
-                history.getAmount().amount(),
-                point.getBalance().amount(),
-                history.getOrderId(),
-                history.getCreatedAt()
-            );
-        }
-    }
-    
-    /**
-     * 포인트 간단 정보 (하위 호환성 유지)
+     * 포인트 정보
      */
     public record Charged(
         String userId,

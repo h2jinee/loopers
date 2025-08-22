@@ -3,7 +3,7 @@ package com.loopers.domain.point;
 import com.loopers.domain.BaseEntity;
 import com.loopers.domain.common.Money;
 import com.loopers.domain.point.vo.Charge;
-import com.loopers.domain.point.vo.PointTransactionType;
+import com.loopers.domain.point.vo.TransactionType;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -22,10 +22,7 @@ public class Point extends BaseEntity {
     private String userId;
     
     @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "amount", 
-            column = @Column(name = "balance", nullable = false))
-    })
+    @AttributeOverride(name = "amount", column = @Column(name = "balance", nullable = false))
     private Money balance;
 
     public Point(String userId, Money initialBalance) {
@@ -41,7 +38,7 @@ public class Point extends BaseEntity {
         return new PointHistory(
             userId,
             amount,
-            PointTransactionType.CHARGE,
+            TransactionType.CHARGE,
             "포인트 충전",
             null,
             newBalance
@@ -56,7 +53,7 @@ public class Point extends BaseEntity {
             return new PointHistory(
                 userId,
                 amount,
-                PointTransactionType.USE,
+                TransactionType.USE,
                 "주문 결제 - 주문번호: " + orderId,
                 orderId,
                 newBalance
@@ -70,6 +67,20 @@ public class Point extends BaseEntity {
         return balance.isGreaterThanOrEqual(amount);
     }
     
+    public PointHistory refund(Money amount, Long orderId) {
+        Money newBalance = balance.add(amount);
+        this.balance = newBalance;
+        
+        return new PointHistory(
+            userId,
+            amount,
+            TransactionType.REFUND,
+            "주문 취소 환불 - 주문번호: " + orderId,
+            orderId,
+            newBalance
+        );
+    }
+    
     public String getUserId() {
         return userId;
     }
@@ -79,7 +90,7 @@ public class Point extends BaseEntity {
     }
 
     public static Point createInitial(String userId) {
-        return new Point(userId, Money.zero());
+        return new Point(userId, Money.ZERO);
     }
     
     @Override

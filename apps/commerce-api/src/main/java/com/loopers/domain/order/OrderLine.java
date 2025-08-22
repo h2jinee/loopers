@@ -21,7 +21,6 @@ public class OrderLine extends BaseEntity {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
     
-    // 다른 Aggregate는 ID로만 참조 (DDD 원칙)
     @Column(name = "product_id", nullable = false)
     private Long productId;
     
@@ -29,10 +28,7 @@ public class OrderLine extends BaseEntity {
     private Integer quantity;
     
     @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "amount", 
-            column = @Column(name = "price", nullable = false))
-    })
+    @AttributeOverride(name = "amount", column = @Column(name = "price", nullable = false))
     private Money price;
     
     // 주문 시점의 상품명 스냅샷

@@ -1,8 +1,11 @@
 package com.loopers.interfaces.api.user;
 
 import com.loopers.domain.user.User;
+import com.loopers.domain.user.UserCommand;
+import com.loopers.domain.user.vo.UserId;
+import com.loopers.domain.user.vo.Birth;
+import com.loopers.domain.user.vo.Email;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
@@ -29,26 +32,28 @@ public class UserDto {
                 String birth,
 
                 @NotNull
-                @Email(message = "올바른 이메일 형식이어야 합니다")
+                @jakarta.validation.constraints.Email(message = "올바른 이메일 형식이어야 합니다")
                 String email
             ) {
-
+                public UserCommand.Create toCommand() {
+                    return new UserCommand.Create(
+                        new UserId(userId),
+                        name,
+                        gender,
+                        new Birth(birth),
+                        new Email(email)
+                    );
+                }
             }
 
             public record Response(
                 String userId,
-                String name,
-				User.Gender gender,
-				String birth,
-                String email
+                String name
             ) {
-                public static Response from(com.loopers.application.user.UserResult.SignUpResult result) {
+                public static Response from(User user) {
                     return new Response(
-                        result.userId(),
-                        result.name(),
-                        result.gender(),
-                        result.birth(),
-                        result.email()
+                        user.getUserId(),
+                        user.getName()
                     );
                 }
             }
@@ -59,17 +64,17 @@ public class UserDto {
             public record Response(
                 String userId,
                 String name,
-                User.Gender gender,
+                String email,
                 String birth,
-                String email
+                String gender
             ) {
-                public static Response from(com.loopers.application.user.UserResult.Detail result) {
+                public static Response from(User user) {
                     return new Response(
-                        result.userId(),
-                        result.name(),
-                        result.gender(),
-                        result.birth(),
-                        result.email()
+                        user.getUserId(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getBirth(),
+                        user.getGender().name()
                     );
                 }
             }

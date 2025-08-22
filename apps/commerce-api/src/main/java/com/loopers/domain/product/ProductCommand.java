@@ -76,20 +76,6 @@ public class ProductCommand {
         }
     }
     
-    public record IncreaseStock(
-        Long productId,
-        Integer quantity
-    ) {
-        public IncreaseStock {
-            if (productId == null) {
-                throw new CoreException(ErrorType.BAD_REQUEST, "상품 ID는 필수입니다.");
-            }
-            if (quantity == null || quantity <= 0) {
-                throw new CoreException(ErrorType.BAD_REQUEST, "수량은 1개 이상이어야 합니다.");
-            }
-        }
-    }
-    
     public record GetOne(
         Long productId
     ) {

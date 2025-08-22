@@ -69,7 +69,7 @@ class OrderConcurrencyTest {
             tasks.add(() -> {
                 try {
                     ReceiverInfo receiverInfo = new ReceiverInfo("테스트", "010-1234-5678", "12345", "서울시", "상세주소");
-                    OrderCriteria.Create criteria = new OrderCriteria.Create(userId, productId, orderQuantity, receiverInfo);
+                    OrderCriteria.Create criteria = new OrderCriteria.Create(userId, productId, orderQuantity, receiverInfo, null, null);
                     orderFacade.createOrder(criteria);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
@@ -123,7 +123,7 @@ class OrderConcurrencyTest {
                 tasks.add(() -> {
                     try {
                         ReceiverInfo receiverInfo = new ReceiverInfo("테스트", "010-1234-5678", "12345", "서울시", "상세주소");
-                        OrderCriteria.Create criteria = new OrderCriteria.Create(testUserId, productId, orderQuantity, receiverInfo);
+                        OrderCriteria.Create criteria = new OrderCriteria.Create(testUserId, productId, orderQuantity, receiverInfo, null, null);
                         orderFacade.createOrder(criteria);
                     } catch (Exception e) {
                         log.debug("주문 실패 - userId: {}, error: {}", testUserId, e.getMessage());

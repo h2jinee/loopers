@@ -32,19 +32,6 @@ public class StockTest {
         assertThat(stock.getQuantity()).isEqualTo(initialStock - quantity);
     }
 
-    @DisplayName("재고를 증가시킬 수 있다.")
-    @Test
-    void increaseStock_successfully() {
-        // arrange
-        int initialStock = stock.getQuantity();
-
-        // act
-        stock.increase(5);
-
-        // assert
-        assertThat(stock.getQuantity()).isEqualTo(initialStock + 5);
-    }
-
     @DisplayName("재고보다 많은 수량을 감소시키려 하면 예외가 발생한다.")
     @Test
     void throwsException_whenDecreasingMoreThanStock() {

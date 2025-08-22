@@ -2,7 +2,7 @@ package com.loopers.domain.point;
 
 import com.loopers.domain.BaseEntity;
 import com.loopers.domain.common.Money;
-import com.loopers.domain.point.vo.PointTransactionType;
+import com.loopers.domain.point.vo.TransactionType;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -27,7 +27,7 @@ public class PointHistory extends BaseEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PointTransactionType type;
+    private TransactionType type;
     
     @Column(columnDefinition = "TEXT")
     private String description;
@@ -41,7 +41,7 @@ public class PointHistory extends BaseEntity {
     public PointHistory(
         String userId,
         Money amount,
-        PointTransactionType type,
+        TransactionType type,
         String description,
         Long orderId,
         Money balanceAfter

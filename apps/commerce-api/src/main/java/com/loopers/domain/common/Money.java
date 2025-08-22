@@ -12,6 +12,8 @@ import java.util.Objects;
 @Embeddable
 public class Money implements Comparable<Money>, Serializable {
     
+    public static final Money ZERO = new Money(BigDecimal.ZERO);
+    
     private BigDecimal amount;
     
     protected Money() {
@@ -40,10 +42,6 @@ public class Money implements Comparable<Money>, Serializable {
         return new Money(BigDecimal.valueOf(amount));
     }
     
-    public static Money zero() {
-        return new Money(BigDecimal.ZERO);
-    }
-    
     public BigDecimal amount() {
         return amount;
     }
@@ -66,6 +64,10 @@ public class Money implements Comparable<Money>, Serializable {
         return new Money(result);
     }
     
+    public Money minus(Money other) {
+        return subtract(other);
+    }
+    
     public Money multiply(int quantity) {
         if (quantity < 0) {
             throw new CoreException(ErrorType.BAD_REQUEST, "수량은 0 이상이어야 합니다.");
@@ -78,6 +80,22 @@ public class Money implements Comparable<Money>, Serializable {
             return true;
         }
         return this.amount.compareTo(other.amount) >= 0;
+    }
+    
+    public boolean isNegative() {
+        return this.amount.compareTo(BigDecimal.ZERO) < 0;
+    }
+    
+    public boolean isNegativeOrZero() {
+        return this.amount.compareTo(BigDecimal.ZERO) <= 0;
+    }
+    
+    public boolean isPositive() {
+        return this.amount.compareTo(BigDecimal.ZERO) > 0;
+    }
+    
+    public boolean isZero() {
+        return this.amount.compareTo(BigDecimal.ZERO) == 0;
     }
     
     @Override

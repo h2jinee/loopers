@@ -1,13 +1,9 @@
 package com.loopers.application.payment;
 
+import com.loopers.application.payment.strategy.PgPaymentStrategy;
+import com.loopers.application.payment.strategy.PointPaymentStrategy;
 import com.loopers.domain.common.Money;
-import com.loopers.domain.order.Order;
-import com.loopers.domain.payment.PaymentCommand;
-import com.loopers.domain.payment.PaymentService;
-import com.loopers.application.point.PointFacade;
-import com.loopers.domain.point.PointCommand;
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
+import com.loopers.domain.payment.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,44 +15,60 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentProcessor {
     
     private final PaymentService paymentService;
-    private final PointFacade pointFacade;
+    private final PointPaymentStrategy pointPaymentStrategy;
+    private final PgPaymentStrategy pgPaymentStrategy;
     
+    /**
+     * 포인트 결제 처리
+     * 독립 트랜잭션 - 포인트 차감과 결제 내역 저장이 원자적으로 처리
+     */
     @Transactional
-    public void processPayment(Order order, String userId) {
-        // 1. 포인트 잔액 확인
-        PointCommand.GetOne getPointCommand = new PointCommand.GetOne(userId);
-        Money balance = pointFacade.getBalance(getPointCommand);
-        
-        if (balance.compareTo(order.getTotalAmount()) < 0) {
-            throw new CoreException(ErrorType.BAD_REQUEST, 
-                String.format("포인트가 부족합니다. 필요: %s, 현재: %s", 
-                    order.getTotalAmount(), balance));
-        }
-        
-        // 2. 결제 유효성 검증
-        PaymentCommand.ProcessPayment paymentCommand = 
-            new PaymentCommand.ProcessPayment(order, userId);
-        paymentService.validatePayment(paymentCommand);
-        
-        // 3. 포인트 차감
-        PointCommand.Use useCommand = new PointCommand.Use(
-            userId, order.getTotalAmount(), order.getId()
+    public PaymentResult processPointPayment(PaymentCommand.Point command) {
+        // 포인트 결제 실행
+        PaymentResult result = pointPaymentStrategy.execute(
+            PaymentCommand.Process.forPoint(command.orderId(), command.userId(), command.amount())
         );
-        pointFacade.use(useCommand);
         
-        log.info("결제 처리 완료 - orderId: {}, userId: {}, amount: {}", 
-            order.getId(), userId, order.getTotalAmount());
+        // 결제 내역 저장
+        paymentService.savePaymentHistory(command.orderId(), result);
+        
+        log.info("포인트 결제 완료 - orderId: {}, amount: {}", 
+            command.orderId(), result.amount());
+        
+        return result;
     }
     
     /**
-     * 결제 취소 처리 (미구현)
+     * PG 결제 처리
+     * 독립 트랜잭션 - PG 결제와 결제 내역 저장이 원자적으로 처리
      */
     @Transactional
-    public void cancelPayment(Long orderId) {
-        // TODO: 실제 결제 취소 로직 구현
-        // 1. 결제 내역 조회
-        // 2. 포인트 환불 처리
+    public PaymentResult processPgPayment(PaymentCommand.Pg command) {
+        // PG 결제 실행
+        PaymentResult result = pgPaymentStrategy.execute(
+            PaymentCommand.Process.forPg(command.orderId(), command.userId(), command.amount(), command.pgInfo())
+        );
         
-        log.info("결제 취소 처리 - orderId: {}", orderId);
+        // 결제 내역 저장
+        paymentService.savePaymentHistory(command.orderId(), result);
+        
+        log.info("PG 결제 완료 - orderId: {}, amount: {}, txnId: {}", 
+            command.orderId(), result.amount(), result.transactionId());
+        
+        return result;
+    }
+    
+    /**
+     * 포인트 결제 취소
+     * 독립 트랜잭션 - 포인트 환불이 원자적으로 처리
+     */
+    @Transactional
+    public void cancelPointPayment(Long orderId, String userId, Money amount) {
+        // 포인트 환불
+        pointPaymentStrategy.cancel(
+            Payment.forPoint(orderId, userId, amount)
+        );
+        
+        log.info("포인트 결제 취소 완료 - orderId: {}, amount: {}", orderId, amount);
     }
 }

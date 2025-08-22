@@ -55,8 +55,8 @@ public class Order extends BaseEntity {
     public Order(String userId, ReceiverInfo receiverInfo) {
         this.userId = userId;
         this.receiverInfo = receiverInfo;
-        this.status = OrderStatus.PAYMENT_PENDING;
-        this.totalAmount = Money.zero();
+        this.status = OrderStatus.PENDING;
+        this.totalAmount = Money.ZERO;
         this.paymentDeadline = ZonedDateTime.now().plusMinutes(PAYMENT_TIMEOUT_MINUTES);
     }
     
@@ -74,7 +74,7 @@ public class Order extends BaseEntity {
     }
 
     private void recalculateTotalAmount() {
-        Money sum = Money.zero();
+        Money sum = Money.ZERO;
         for (OrderLine line : orderLines) {
             sum = sum.add(line.getSubtotal());
         }
@@ -86,27 +86,27 @@ public class Order extends BaseEntity {
     }
     
     public boolean isPaymentExpired() {
-        if (status != OrderStatus.PAYMENT_PENDING) {
+        if (status != OrderStatus.PENDING) {
             return false;
         }
         return ZonedDateTime.now().isAfter(paymentDeadline);
     }
     
     public void confirmPayment() {
-        if (status != OrderStatus.PAYMENT_PENDING) {
+        if (status != OrderStatus.PENDING) {
             throw new CoreException(ErrorType.BAD_REQUEST, "결제 대기 상태가 아닙니다.");
         }
         if (isPaymentExpired()) {
             throw new CoreException(ErrorType.BAD_REQUEST, "결제 시간이 만료되었습니다.");
         }
-        this.status = OrderStatus.PAYMENT_COMPLETED;
+        this.status = OrderStatus.COMPLETED;
     }
     
     public void failPayment() {
-        if (status != OrderStatus.PAYMENT_PENDING) {
+        if (status != OrderStatus.PENDING) {
             throw new CoreException(ErrorType.BAD_REQUEST, "결제 대기 상태가 아닙니다.");
         }
-        this.status = OrderStatus.PAYMENT_FAILED;
+        this.status = OrderStatus.FAILED;
     }
 
     @Override

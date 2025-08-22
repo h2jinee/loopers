@@ -29,6 +29,82 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+pg:
+  simulator:
+    url: http://localhost:8082
+
+feign:
+  client:
+    config:
+      default:  # 모든 feign client 기본값
+        connectTimeout: 2000  # 연결 타임아웃 2초
+        readTimeout: 5000     # 읽기 타임아웃 5초
+        loggerLevel: FULL     # 디버깅용 (나중에 BASIC으로 변경)
+      payment-gateway:  # PG 전용 설정 (기본값 오버라이드)
+        connectTimeout: 1000  # 연결은 빠르게 1초
+        readTimeout: 3000     # PG 지연(100-500ms) 고려해서 3초
+        loggerLevel: FULL
+  httpclient:
+    enabled: true  # Apache HttpClient 사용 (더 안정적)
+    max-connections: 200
+    max-connections-per-route: 50
+    time-to-live: 900
+    time-to-live-unit: seconds
+    connection-timeout: 2000
+    connection-timer-repeat: 3000
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      pg-payment:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 3s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 3s
+        slow-call-rate-threshold: 50
+        sliding-window-type: time_based
+        record-exceptions:
+          - java.lang.Throwable
+      get-payment:
+        sliding-window-size: 20
+        failure-rate-threshold: 30
+        wait-duration-in-open-state: 1s
+        permitted-number-of-calls-in-half-open-state: 5
+        slow-call-duration-threshold: 1s
+        slow-call-rate-threshold: 20
+        sliding-window-type: time_based
+        record-exceptions:
+          - java.lang.Throwable
+  retry:
+    instances:
+      pg-payment:
+        max-attempts: 3
+        wait-duration: 1s
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.lang.RuntimeException
+          - java.util.concurrent.TimeoutException
+          - feign.RetryableException
+          - java.lang.IllegalArgumentException
+      get-payment:
+        max-attempts: 1
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.lang.RuntimeException
+          - java.util.concurrent.TimeoutException
+          - feign.RetryableException
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus, circuitbreakerevents
+
+  metrics:
+    enable:
+      all: true
+
 ---
 spring:
   config:

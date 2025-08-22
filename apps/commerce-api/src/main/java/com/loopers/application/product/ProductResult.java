@@ -1,66 +1,122 @@
 package com.loopers.application.product;
 
-import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.product.vo.ProductStatus;
-
+import com.loopers.domain.product.ProductInfo;
+import com.loopers.domain.brand.BrandInfo;
+import com.loopers.domain.stock.StockInfo;
 import java.math.BigDecimal;
 
 public class ProductResult {
     
     public record Detail(
-        Long productId,
-        Long brandId,
-        String brandNameKo,
-        String productNameKo,
-        String description,
-        BigDecimal price,
-        BigDecimal shippingFee,
-        BigDecimal totalPrice,
-        Integer stock,
-        ProductStatus status,
-        Integer releaseYear,
-        Long likeCount,
-        boolean isAvailable
+        ProductDetail product,
+        BrandDetail brand,
+        StockDetail stock
     ) {
-        public static Detail from(ProductInfo.Detail domainInfo) {
+        public record ProductDetail(
+            Long productId,
+            String nameKo,
+            String description,
+            BigDecimal price,
+            BigDecimal shippingFee,
+            BigDecimal totalPrice,
+            ProductStatus status,
+            Integer releaseYear,
+            Long likeCount,
+            boolean isAvailable
+        ) {
+            public static ProductDetail from(ProductInfo info) {
+                return new ProductDetail(
+                    info.productId(),
+                    info.nameKo(),
+                    info.description(),
+                    info.price().amount(),
+                    info.shippingFee().amount(),
+                    info.totalPrice().amount(),
+                    info.status(),
+                    info.releaseYear(),
+                    info.likeCount(),
+                    info.isAvailable()
+                );
+            }
+        }
+        
+        public record BrandDetail(
+            Long brandId,
+            String nameKo
+        ) {
+            public static BrandDetail from(BrandInfo info) {
+                return new BrandDetail(
+                    info.brandId(),
+                    info.nameKo()
+                );
+            }
+        }
+        
+        public record StockDetail(
+            Integer quantity,
+            boolean inStock
+        ) {
+            public static StockDetail from(StockInfo info) {
+                return new StockDetail(
+                    info.quantity(),
+                    info.quantity() > 0
+                );
+            }
+        }
+        
+        public static Detail from(ProductInfo productInfo, BrandInfo brandInfo, StockInfo stockInfo) {
             return new Detail(
-                domainInfo.productId(),
-                domainInfo.brandId(),
-                domainInfo.brandNameKo(),
-                domainInfo.productNameKo(),
-                domainInfo.description(),
-                domainInfo.price(),
-                domainInfo.shippingFee(),
-                domainInfo.totalPrice(),
-                domainInfo.stock(),
-                domainInfo.status(),
-                domainInfo.releaseYear(),
-                domainInfo.likeCount(),
-                domainInfo.isAvailable()
+                ProductDetail.from(productInfo),
+                BrandDetail.from(brandInfo),
+                StockDetail.from(stockInfo)
             );
         }
     }
     
     public record Summary(
-        Long productId,
-        Long brandId,
-        String brandNameKo,
-        String productNameKo,
-        String description,
-        BigDecimal price,
-        Long likeCount,
+        ProductSummary product,
+        BrandSummary brand,
         boolean isAvailable
     ) {
-        public static Summary from(ProductInfo.Summary domainInfo) {
+        public record ProductSummary(
+            Long productId,
+            String nameKo,
+            String description,
+            BigDecimal price,
+            Long likeCount
+        ) {
+            public static ProductSummary from(ProductInfo info) {
+                return new ProductSummary(
+                    info.productId(),
+                    info.nameKo(),
+                    info.description(),
+                    info.price().amount(),
+                    info.likeCount()
+                );
+            }
+        }
+        
+        public record BrandSummary(
+            Long brandId,
+            String nameKo
+        ) {
+            public static BrandSummary from(BrandInfo info) {
+                if (info == null) {
+                    return new BrandSummary(null, "Unknown");
+                }
+                return new BrandSummary(
+                    info.brandId(),
+                    info.nameKo()
+                );
+            }
+        }
+        
+        public static Summary from(ProductInfo productInfo, BrandInfo brandInfo, StockInfo stockInfo) {
             return new Summary(
-                domainInfo.productId(),
-                domainInfo.brandId(),
-                domainInfo.brandNameKo(),
-                domainInfo.productNameKo(),
-                domainInfo.description(),
-                domainInfo.price(),
-                domainInfo.likeCount(),
-                domainInfo.isAvailable()
+                ProductSummary.from(productInfo),
+                BrandSummary.from(brandInfo),
+                stockInfo != null && stockInfo.isAvailable()
             );
         }
     }

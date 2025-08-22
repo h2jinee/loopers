@@ -34,7 +34,16 @@ public class OrderDto {
                 @NotBlank(message = "주소는 필수입니다.")
                 String receiverAddress,
                 
-                String receiverAddressDetail
+                String receiverAddressDetail,
+                
+                // 포인트 사용 금액 (옵션)
+                BigDecimal pointToUse,
+                
+                // PG 결제 정보 (옵션)
+                String cardNumber,
+                String cardHolder,
+                String expiryDate,
+                String cvv
             ) {
             }
             

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -19,4 +20,7 @@ public interface StockJpaRepository extends JpaRepository<Stock, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Stock s WHERE s.productId = :productId")
     Optional<Stock> findByProductIdWithPessimisticLock(@Param("productId") Long productId);
+    
+    @Query("SELECT s FROM Stock s WHERE s.productId IN :productIds")
+    List<Stock> findByProductIdIn(@Param("productIds") List<Long> productIds);
 }

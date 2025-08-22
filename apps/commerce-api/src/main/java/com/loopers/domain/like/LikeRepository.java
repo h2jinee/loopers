@@ -11,5 +11,5 @@ public interface LikeRepository {
     
     boolean existsByUserIdAndProductId(String userId, Long productId);
     
-    Page<LikedProductDto> findByUserId(String userId, Pageable pageable);
+    Page<Like> findByUserId(String userId, Pageable pageable);
 }

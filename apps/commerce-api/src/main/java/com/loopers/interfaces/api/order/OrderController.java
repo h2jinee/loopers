@@ -3,6 +3,9 @@ package com.loopers.interfaces.api.order;
 import com.loopers.application.order.OrderFacade;
 import com.loopers.application.order.OrderCriteria;
 import com.loopers.application.order.OrderResult;
+import com.loopers.domain.common.Money;
+import com.loopers.domain.order.vo.ReceiverInfo;
+import com.loopers.domain.payment.PgPaymentInfo;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -25,7 +28,8 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
     
     private final OrderFacade orderFacade;
-    
+
+    // TODO?
     @PostMapping
     @Operation(summary = "주문 생성", description = "새로운 주문을 생성합니다.")
     public ApiResponse<OrderDto.V1.Create.Response> createOrder(
@@ -34,16 +38,52 @@ public class OrderController {
     ) {
         validateUserId(userId);
         
-        OrderCriteria.Create criteria = OrderCriteria.Create.from(
-            userId,
-            request.productId(),
-            request.quantity(),
+        // ReceiverInfo 생성
+        ReceiverInfo receiverInfo = new ReceiverInfo(
             request.receiverName(),
             request.receiverPhone(),
             request.receiverZipCode(),
             request.receiverAddress(),
             request.receiverAddressDetail()
         );
+        
+        // 결제 방식에 따라 OrderCriteria 생성
+        OrderCriteria.Create criteria;
+        
+        if (request.pointToUse() != null && request.pointToUse().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            Money pointToUse = Money.of(request.pointToUse());
+            
+            // PG 정보가 있으면 복합 결제, 없으면 포인트 전액 결제
+            if (request.cardNumber() != null) {
+                PgPaymentInfo pgInfo = new PgPaymentInfo(
+                    request.cardNumber(),
+                    request.cardHolder(),
+                    request.expiryDate(),
+                    request.cvv()
+                );
+                criteria = OrderCriteria.Create.withPoint(
+                    userId, request.productId(), request.quantity(),
+                    receiverInfo, pointToUse, pgInfo
+                );
+            } else {
+                criteria = OrderCriteria.Create.pointOnly(
+                    userId, request.productId(), request.quantity(),
+                    receiverInfo, pointToUse
+                );
+            }
+        } else {
+            // 포인트 미사용 - PG 전액 결제
+            PgPaymentInfo pgInfo = new PgPaymentInfo(
+                request.cardNumber(),
+                request.cardHolder(),
+                request.expiryDate(),
+                request.cvv()
+            );
+            criteria = OrderCriteria.Create.withoutPoint(
+                userId, request.productId(), request.quantity(),
+                receiverInfo, pgInfo
+            );
+        }
         
         OrderResult.CreateResult result = orderFacade.createOrder(criteria);
         

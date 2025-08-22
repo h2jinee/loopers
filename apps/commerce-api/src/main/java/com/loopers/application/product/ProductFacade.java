@@ -1,48 +1,67 @@
 package com.loopers.application.product;
 
-import com.loopers.application.stock.StockFacade;
+import com.loopers.domain.brand.BrandCommand;
+import com.loopers.domain.brand.BrandInfo;
+import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.*;
+import com.loopers.domain.stock.StockInfo;
+import com.loopers.domain.stock.StockService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductFacade {
     
     private final ProductService productService;
-    private final StockFacade stockFacade;
+    private final BrandService brandService;
+    private final StockService stockService;
     
-    @Transactional(readOnly = true)
     public ProductResult.Detail getProductDetail(ProductCriteria.GetDetail criteria) {
-        ProductCommand.GetOne command = criteria.toCommand();
-        ProductService.ProductWithBrand productWithBrand = productService.getProductWithBrand(command);
-        
-        // 재고 정보를 StockFacade에서 조회
-        ProductStockInfo stockInfo = new ProductStockInfo(
-            productWithBrand.product().id(),
-            stockFacade.getStock(productWithBrand.product().id()),
-            stockFacade.isAvailable(productWithBrand.product().id())
+        // 1. 상품 정보 조회
+        ProductInfo productInfo = productService.getProduct(
+            new ProductCommand.GetOne(criteria.productId())
         );
         
-        ProductInfo.Detail domainInfo = ProductInfo.Detail.from(
-            productWithBrand.product(),
-            productWithBrand.brand(),
-            stockInfo
+        // 2. 브랜드 정보 조회
+        BrandInfo brandInfo = brandService.getBrand(
+            new BrandCommand.GetOne(productInfo.brandId())
         );
-        return ProductResult.Detail.from(domainInfo);
+        
+        // 3. 재고 정보 조회
+        StockInfo stockInfo = stockService.getStockInfo(criteria.productId());
+        
+        // 4. 결과 조합
+        return ProductResult.Detail.from(productInfo, brandInfo, stockInfo);
     }
     
-    @Transactional(readOnly = true)
     public Page<ProductResult.Summary> getProductList(ProductCriteria.GetList criteria) {
-        ProductCommand.GetList command = criteria.toCommand();
-        Page<ProductService.ProductWithBrandAndStock> productsWithBrandAndStock = 
-            productService.getProductListWithBrandAndStock(command);
+        // 1. 상품 목록 조회
+        Page<ProductInfo> products = productService.getProducts(criteria.toCommand());
         
-        return productsWithBrandAndStock.map(item -> {
-            ProductInfo.Summary domainInfo = ProductInfo.Summary.from(item);
-            return ProductResult.Summary.from(domainInfo);
+        // 2. 필요한 ID들 추출
+        List<Long> productIds = products.map(ProductInfo::productId).toList();
+        List<Long> brandIds = products.stream()
+            .map(ProductInfo::brandId)
+            .distinct()
+            .toList();
+        
+        // 3. 벌크 조회 (N+1 방지)
+        Map<Long, BrandInfo> brandMap = brandService.getBrandsByIds(brandIds);
+        Map<Long, StockInfo> stockMap = stockService.getStockInfosByProductIds(productIds);
+        
+        // 4. 결과 조합
+        return products.map(product -> {
+            BrandInfo brand = brandMap.get(product.brandId());
+            StockInfo stock = stockMap.get(product.productId());
+
+            return ProductResult.Summary.from(product, brand, stock);
         });
     }
 }

@@ -77,17 +77,6 @@ public class PointFacade {
     }
     
     /**
-     * 포인트 잔액 조회
-     */
-    public Money getBalance(PointCommand.GetOne command) {
-        Point point = pointRepository.findByUserId(command.userId())
-            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
-                "포인트 정보를 찾을 수 없습니다. userId: " + command.userId()));
-        
-        return point.getBalance();
-    }
-    
-    /**
      * 포인트 초기화
      * - 사용자 등록 시 호출
      */

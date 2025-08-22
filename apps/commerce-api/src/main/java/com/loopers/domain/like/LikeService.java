@@ -7,7 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -40,20 +39,11 @@ public class LikeService {
     }
     
     /**
-     * 좋아요한 상품 목록 조회
+     * 사용자가 좋아요한 목록 조회
      */
-    public Page<LikedProductDto> getLikedProducts(LikeCommand.GetList command, Pageable pageable) {
-        log.debug("좋아요한 상품 목록 조회 시작 - userId: {}, page: {}, size: {}", 
-                  command.userId(), pageable.getPageNumber(), pageable.getPageSize());
-        
-        Page<LikedProductDto> result = likeRepository.findByUserId(
-            command.userId(), 
-            pageable
-        );
-        
-        log.debug("좋아요한 상품 목록 조회 완료 - 조회된 상품 수: {}, 전체 페이지: {}", 
-                  result.getNumberOfElements(), result.getTotalPages());
-        
-        return result;
+    public Page<Like> getUserLikes(String userId, Pageable pageable) {
+        log.debug("좋아요 목록 조회 - userId: {}, page: {}, size: {}", 
+                  userId, pageable.getPageNumber(), pageable.getPageSize());
+        return likeRepository.findByUserId(userId, pageable);
     }
 }

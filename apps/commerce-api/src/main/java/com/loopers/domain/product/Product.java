@@ -79,22 +79,6 @@ public class Product extends BaseEntity {
     }
 
     /**
-     * 좋아요 수 증가
-     */
-    public void incrementLikeCount() {
-        this.likeCount = (this.likeCount != null ? this.likeCount : 0L) + 1;
-    }
-    
-    /**
-     * 좋아요 수 감소
-     */
-    public void decrementLikeCount() {
-        if (this.likeCount != null && this.likeCount > 0) {
-            this.likeCount--;
-        }
-    }
-    
-    /**
      * 좋아요 수 동기화 (배치 작업용)
      * @param count 동기화할 좋아요 수
      */

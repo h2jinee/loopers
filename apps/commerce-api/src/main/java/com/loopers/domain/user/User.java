@@ -3,7 +3,7 @@ package com.loopers.domain.user;
 import com.loopers.domain.BaseEntity;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.;
+import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
@@ -48,5 +48,15 @@ public class User extends BaseEntity {
 		this.birth = birth;
 		this.email = email;
 
+	}
+	
+	public static User create(UserCommand.Create command) {
+		return new User(
+			command.userId().value(),
+			command.name(),
+			command.gender(),
+			command.birth().value(),
+			command.email().value()
+		);
 	}
 }

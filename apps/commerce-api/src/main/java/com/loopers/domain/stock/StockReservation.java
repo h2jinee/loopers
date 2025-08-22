@@ -27,18 +27,6 @@ public class StockReservation extends BaseEntity {
     @Column(nullable = false)
     private ReservationStatus status;
     
-    public enum ReservationStatus {
-        RESERVED("예약됨"),
-        CONFIRMED("확정됨"),
-        CANCELLED("취소됨");
-        
-        private final String description;
-        
-        ReservationStatus(String description) {
-            this.description = description;
-        }
-    }
-    
     public StockReservation(Long orderId, Long productId, Integer quantity) {
         validateOrderId(orderId);
         validateProductId(productId);

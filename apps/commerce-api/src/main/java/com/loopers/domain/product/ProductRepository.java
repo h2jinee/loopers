@@ -13,15 +13,13 @@ public interface ProductRepository {
     
     Page<Product> findByBrandIdWithLikeCount(Long brandId, Pageable pageable);
     
-    Page<ProductWithBrandDto> findAllProductsWithBrand(Pageable pageable);
-    
-    Page<ProductWithBrandDto> findProductsWithBrandByBrandId(Long brandId, Pageable pageable);
-    
-    List<ProductStockInfo> findProductStockInfoByIds(List<Long> productIds);
-    
+    List<Product> findByIdIn(List<Long> productIds);
+
     Product save(Product product);
     
     void incrementLikeCount(Long productId);
     
     void decrementLikeCount(Long productId);
+    
+    boolean existsById(Long id);
 }

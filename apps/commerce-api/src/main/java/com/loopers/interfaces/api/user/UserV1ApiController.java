@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.loopers.application.user.UserCriteria;
-import com.loopers.application.user.UserFacade;
-import com.loopers.application.user.UserResult;
+import com.loopers.domain.user.UserService;
+import com.loopers.domain.user.UserCommand;
+import com.loopers.domain.user.User;
 import com.loopers.interfaces.api.ApiResponse;
 
 import jakarta.validation.Valid;
@@ -20,22 +20,16 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/users")
 public class UserV1ApiController implements UserV1ApiSpec {
     
-    private final UserFacade userFacade;
+    private final UserService userService;
 
     @PostMapping
     @Override
     public ApiResponse<UserDto.V1.SignUp.Response> signUp(
         @Valid @RequestBody UserDto.V1.SignUp.Request request
     ) {
-        UserCriteria.SignUp criteria = new UserCriteria.SignUp(
-            request.userId(), 
-            request.name(), 
-            request.gender(), 
-            request.birth(), 
-            request.email()
-        );
-        UserResult.SignUpResult result = userFacade.signUp(criteria);
-        UserDto.V1.SignUp.Response response = UserDto.V1.SignUp.Response.from(result);
+        UserCommand.Create command = request.toCommand();
+        User user = userService.createUser(command);
+        UserDto.V1.SignUp.Response response = UserDto.V1.SignUp.Response.from(user);
         return ApiResponse.success(response);
     }
     
@@ -44,9 +38,9 @@ public class UserV1ApiController implements UserV1ApiSpec {
     public ApiResponse<UserDto.V1.GetUser.Response> getUserInfo(
         @RequestHeader(value = "X-USER-ID") String userId
     ) {
-        UserCriteria.GetDetail criteria = new UserCriteria.GetDetail(userId);
-        UserResult.Detail result = userFacade.getUserInfo(criteria);
-        UserDto.V1.GetUser.Response response = UserDto.V1.GetUser.Response.from(result);
+        UserCommand.GetOne command = new UserCommand.GetOne(userId);
+        User user = userService.getUserInfo(command);
+        UserDto.V1.GetUser.Response response = UserDto.V1.GetUser.Response.from(user);
         return ApiResponse.success(response);
     }
 }

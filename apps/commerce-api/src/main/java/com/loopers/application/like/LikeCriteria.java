@@ -11,10 +11,6 @@ public class LikeCriteria {
         public LikeCommand.Toggle toCommand() {
             return new LikeCommand.Toggle(userId, productId);
         }
-        
-        public LikeCommand.IsLiked toIsLikedCommand() {
-            return new LikeCommand.IsLiked(userId, productId);
-        }
     }
     
     public record RemoveLike(
@@ -23,10 +19,6 @@ public class LikeCriteria {
     ) {
         public LikeCommand.Toggle toCommand() {
             return new LikeCommand.Toggle(userId, productId);
-        }
-        
-        public LikeCommand.IsLiked toIsLikedCommand() {
-            return new LikeCommand.IsLiked(userId, productId);
         }
     }
     
