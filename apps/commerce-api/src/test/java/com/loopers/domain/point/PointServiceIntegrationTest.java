@@ -57,9 +57,9 @@ public class PointServiceIntegrationTest {
 
 	@AfterEach
 	void tearDown() {
-		userJpaRepository.deleteAll();
-		pointJpaRepository.deleteAll();
 		pointHistoryJpaRepository.deleteAll();
+		pointJpaRepository.deleteAll();
+		userJpaRepository.deleteAll();
 	}
 
 	/*
@@ -156,14 +156,14 @@ public class PointServiceIntegrationTest {
 		@Test
 		void createsPoint_whenUserHasNoPoints() {
 			// arrange
-			String newUserId = "new-user";
+			String newUserId = "new-user-" + System.nanoTime();
 			// 새 유저 생성 (포인트 초기화 없이)
 			UserCommand.Create userCommand = new UserCommand.Create(
 				new UserId(newUserId),
 				"새유저",
 				User.Gender.M,
 				new Birth("2000-01-01"),
-				new Email("new@test.com")
+				new Email("new" + System.nanoTime() + "@test.com")
 			);
 			userService.createUser(userCommand);
 			

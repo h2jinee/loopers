@@ -1,6 +1,10 @@
 package com.loopers.domain.stock;
 
 import com.loopers.application.stock.StockFacade;
+import com.loopers.domain.common.Money;
+import com.loopers.domain.product.Product;
+import com.loopers.domain.product.vo.ProductStatus;
+import com.loopers.infrastructure.product.ProductJpaRepository;
 import com.loopers.infrastructure.stock.StockJpaRepository;
 import com.loopers.support.util.ConcurrentTestUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -26,24 +30,38 @@ class StockConcurrencyTest {
 
     @Autowired
     private StockJpaRepository stockRepository;
+    
+    @Autowired
+    private ProductJpaRepository productRepository;
 
     private Long productId;
 
     @BeforeEach
     void setUp() {
-        // 동적으로 product_id 생성
-        productId = System.currentTimeMillis() % 100000;
+        // 1. Product 생성
+        Product product = new Product(
+            1L, // brandId
+            "테스트 상품 " + System.nanoTime(),
+            Money.of(10000), // price
+            "테스트 설명", // description
+            ProductStatus.AVAILABLE, // status
+            2024, // releaseYear
+            Money.of(0) // shippingFee
+        );
+        Product savedProduct = productRepository.save(product);
+        productId = savedProduct.getId();
         
+        // 2. Stock 생성
         int initialStock = 100;
         Stock stock = new Stock(productId, initialStock);
-        Stock saved = stockRepository.save(stock);
-        productId = saved.getProductId();
+        stockRepository.save(stock);
     }
 
     @AfterEach
     void tearDown() {
-        // 테스트 데이터 정리
+        // 테스트 데이터 정리 (순서 중요: Stock 먼저 삭제)
         stockRepository.deleteAll();
+        productRepository.deleteAll();
     }
 
     @Test
