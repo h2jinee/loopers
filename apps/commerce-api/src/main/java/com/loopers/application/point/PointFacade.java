@@ -25,8 +25,8 @@ public class PointFacade {
     public PointResult.Charged charge(PointCriteria.Charge criteria) {
         PointCommand.Charge command = criteria.toCommand();
         
-        // 1. 기존 포인트 조회 또는 생성
-        Point point = pointRepository.findByUserId(command.userId())
+        // 1. 기존 포인트 조회 또는 생성 (비관적 락 사용)
+        Point point = pointRepository.findByUserIdWithLock(command.userId())
             .orElseGet(() -> pointService.init(command.userId()));
         
         // 2. 충전
