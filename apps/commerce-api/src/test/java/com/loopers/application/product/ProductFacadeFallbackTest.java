@@ -27,7 +27,6 @@ public class ProductFacadeFallbackTest {
         
         // then
         assertThat(result).isNotNull();
-        // Fallback에서 반환하는 기본값들 확인
     }
     
     @Test

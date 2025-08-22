@@ -6,8 +6,6 @@ import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.*;
 import com.loopers.domain.stock.StockInfo;
 import com.loopers.domain.stock.StockService;
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -77,10 +75,8 @@ public class ProductFacade {
     public ProductResult.Detail getProductDetailFallback(ProductCriteria.GetDetail criteria, Exception ex) {
         log.error("상품 상세 조회 실패, Fallback 처리: productId={}, error={}", 
             criteria.productId(), ex.getMessage());
-        
-        // 캐시된 데이터가 있다면 반환, 없다면 서비스 불가 메시지
-        throw new CoreException(ErrorType.INTERNAL_ERROR, 
-            "일시적인 오류로 상품 정보를 조회할 수 없습니다. 잠시 후 다시 시도해주세요.");
+
+        return ProductResult.Detail.createFallback(criteria.productId());
     }
     
     /**

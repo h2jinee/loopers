@@ -72,6 +72,37 @@ public class ProductResult {
                 StockDetail.from(stockInfo)
             );
         }
+        
+        /**
+         * Fallback 응답 생성
+         * CircuitBreaker가 열렸을 때 반환할 기본값
+         */
+        public static Detail createFallback(Long productId) {
+            ProductDetail fallbackProduct = new ProductDetail(
+                productId,
+                "일시적으로 조회 불가",
+                "서비스가 일시적으로 불가능합니다",
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                ProductStatus.OUT_OF_STOCK,
+                0,
+                0L,
+                false
+            );
+            
+            BrandDetail fallbackBrand = new BrandDetail(
+                0L,
+                "Unknown"
+            );
+            
+            StockDetail fallbackStock = new StockDetail(
+                0,
+                false
+            );
+            
+            return new Detail(fallbackProduct, fallbackBrand, fallbackStock);
+        }
     }
     
     public record Summary(
