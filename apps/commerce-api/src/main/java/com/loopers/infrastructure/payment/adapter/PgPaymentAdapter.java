@@ -73,11 +73,11 @@ public class PgPaymentAdapter implements PgPaymentPort {
             
         } catch (FeignException.ServiceUnavailable | FeignException.BadGateway e) {
             log.warn("PG 서버 일시 장애: orderId={}, status={}", command.orderId(), e.status());
-            return PgPaymentResult.pending(tempTransactionId, "PG 서버 일시 장애 - 재시도 필요");
+            throw e;
             
         } catch (RetryableException e) {
             log.warn("재시도 가능한 오류: orderId={}", command.orderId(), e);
-            return PgPaymentResult.pending(tempTransactionId, "네트워크 오류 - 재시도 필요");
+            throw e;
             
         } catch (FeignException e) {
             log.error("PG 통신 오류: orderId={}, status={}", command.orderId(), e.status(), e);

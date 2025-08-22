@@ -66,7 +66,7 @@ resilience4j:
         permitted-number-of-calls-in-half-open-state: 3
         slow-call-duration-threshold: 3s
         slow-call-rate-threshold: 50
-        sliding-window-type: time_based
+        sliding-window-type: count_based
         record-exceptions:
           - java.lang.Throwable
       get-payment:
@@ -83,13 +83,12 @@ resilience4j:
     instances:
       pg-payment:
         max-attempts: 3
-        wait-duration: 1s
+        wait-duration: 100ms
         exponential-backoff-multiplier: 2
         retry-exceptions:
-          - java.lang.RuntimeException
-          - java.util.concurrent.TimeoutException
+          - feign.FeignException
           - feign.RetryableException
-          - java.lang.IllegalArgumentException
+          - java.util.concurrent.TimeoutException
       get-payment:
         max-attempts: 1
         wait-duration: 500ms
@@ -131,29 +130,17 @@ spring:
     activate:
       on-profile: dev
 
-payment:
-  callback:
-    url: https://dev-api.loopers.com/api/v1/payments/callback
-
 ---
 spring:
   config:
     activate:
       on-profile: qa
 
-payment:
-  callback:
-    url: https://qa-api.loopers.com/api/v1/payments/callback
-
 ---
 spring:
   config:
     activate:
       on-profile: prd
-
-payment:
-  callback:
-    url: https://api.loopers.com/api/v1/payments/callback
 
 springdoc:
   api-docs:
