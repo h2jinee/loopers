@@ -25,6 +25,11 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     }
     
     @Override
+    public Optional<Payment> findByTransactionId(String transactionId) {
+        return jpaRepository.findByTransactionId(transactionId);
+    }
+    
+    @Override
     public List<Payment> findByUserId(String userId) {
         return jpaRepository.findByUserId(userId);
     }

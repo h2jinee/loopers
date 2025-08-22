@@ -45,4 +45,24 @@ public class OrderService {
     public Order save(Order order) {
         return orderRepository.save(order);
     }
+    
+    /**
+     * 주문 상태를 PAID로 변경 (결제 성공 콜백)
+     */
+    @Transactional
+    public void updateOrderStatusToPaid(Long orderId) {
+        Order order = findById(orderId);
+        order.markAsPaid();
+        orderRepository.save(order);
+    }
+    
+    /**
+     * 주문 상태를 FAILED로 변경 (결제 실패 콜백)
+     */
+    @Transactional
+    public void updateOrderStatusToPaymentFailed(Long orderId) {
+        Order order = findById(orderId);
+        order.markAsPaymentFailed();
+        orderRepository.save(order);
+    }
 }

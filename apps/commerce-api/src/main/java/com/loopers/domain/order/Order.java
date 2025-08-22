@@ -108,6 +108,28 @@ public class Order extends BaseEntity {
         }
         this.status = OrderStatus.FAILED;
     }
+    
+    /**
+     * 결제 성공 처리 (콜백용)
+     */
+    public void markAsPaid() {
+        if (status != OrderStatus.PENDING) {
+            throw new CoreException(ErrorType.BAD_REQUEST, 
+                "결제 대기 상태의 주문만 결제 완료 처리할 수 있습니다.");
+        }
+        this.status = OrderStatus.PAID;
+    }
+    
+    /**
+     * 결제 실패 처리 (콜백용)
+     */
+    public void markAsPaymentFailed() {
+        if (status != OrderStatus.PENDING) {
+            throw new CoreException(ErrorType.BAD_REQUEST,
+                "결제 대기 상태의 주문만 결제 실패 처리할 수 있습니다.");
+        }
+        this.status = OrderStatus.PAYMENT_FAILED;
+    }
 
     @Override
     protected void guard() {

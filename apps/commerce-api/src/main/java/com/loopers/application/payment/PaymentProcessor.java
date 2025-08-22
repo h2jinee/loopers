@@ -3,7 +3,10 @@ package com.loopers.application.payment;
 import com.loopers.application.payment.strategy.PgPaymentStrategy;
 import com.loopers.application.payment.strategy.PointPaymentStrategy;
 import com.loopers.domain.common.Money;
+import com.loopers.domain.order.OrderService;
 import com.loopers.domain.payment.*;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentProcessor {
     
     private final PaymentService paymentService;
+    private final OrderService orderService;
     private final PointPaymentStrategy pointPaymentStrategy;
     private final PgPaymentStrategy pgPaymentStrategy;
     
@@ -70,5 +74,33 @@ public class PaymentProcessor {
         );
         
         log.info("포인트 결제 취소 완료 - orderId: {}, amount: {}", orderId, amount);
+    }
+    
+    /**
+     * 결제 결과 처리
+     * 독립 트랜잭션 - 결제 상태 및 주문 상태 업데이트가 원자적으로 처리
+     */
+    @Transactional
+    public void processPaymentResult(PaymentResultCommand command) {
+        log.info("결제 결과 처리 시작: transactionKey={}, orderId={}, success={}", 
+            command.transactionKey(), command.orderId(), command.success());
+        
+        try {
+            if (command.success()) {
+                paymentService.completePayment(command.transactionKey());
+                orderService.updateOrderStatusToPaid(command.orderId());
+                log.info("결제 성공 처리 완료: orderId={}", command.orderId());
+            } else {
+                paymentService.failPayment(command.transactionKey(), command.failureReason());
+                orderService.updateOrderStatusToPaymentFailed(command.orderId());
+                log.warn("결제 실패 처리 완료: orderId={}, reason={}", 
+                    command.orderId(), command.failureReason());
+            }
+            
+        } catch (Exception e) {
+            log.error("결제 결과 처리 중 오류: transactionKey={}, orderId={}", 
+                command.transactionKey(), command.orderId(), e);
+            throw new CoreException(ErrorType.INTERNAL_ERROR, "결제 결과 처리 실패");
+        }
     }
 }

@@ -9,5 +9,7 @@ public interface PaymentRepository {
     
     Optional<Payment> findById(Long id);
     
+    Optional<Payment> findByTransactionId(String transactionId);
+    
     List<Payment> findByUserId(String userId);
 }

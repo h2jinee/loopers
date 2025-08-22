@@ -31,6 +31,9 @@ dependencies {
     // datafaker
     implementation("net.datafaker:datafaker:2.4.1")
     
+    // configuration processor for IDE support
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+    
     // test-fixtures
     testImplementation(testFixtures(project(":modules:jpa")))
     testImplementation(testFixtures(project(":modules:redis")))

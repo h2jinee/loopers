@@ -58,55 +58,13 @@ public class PgPaymentStrategy implements PaymentStrategy {
             );
         }
     }
-    
-    @Override
-    public void cancel(Payment payment) {
-        if (payment.getPaymentMethod() != PaymentMethod.PG) {
-            throw new CoreException(
-                ErrorType.BAD_REQUEST,
-                "PG 결제가 아닙니다."
-            );
-        }
-        
-        try {
-            paymentService.cancelPayment(payment.getId());
-            log.info("PG 결제 취소 완료: paymentId={}", payment.getId());
-        } catch (Exception e) {
-            log.error("PG 결제 취소 실패: paymentId={}", payment.getId(), e);
-            throw new CoreException(
-                ErrorType.INTERNAL_ERROR,
-                "PG 결제 취소 실패: " + e.getMessage()
-            );
-        }
-    }
-    
-    /**
-     * PgPaymentInfo를 CardInfo로 변환
-     * TODO: 실제 구현 시 cvv, expiryDate 등 추가 필요
-     */
+
     private CardInfo createCardInfo(PgPaymentInfo pgInfo) {
-        CardType cardType = determineCardType(pgInfo.cardNumber());
+        CardType cardType = CardType.valueOf(pgInfo.cardType());
         
         return new CardInfo(
             cardType,
-            pgInfo.cardNumber(),
-            pgInfo.cardHolder(),
-            pgInfo.expiryDate(),
-            pgInfo.cvv()
+            pgInfo.cardNo()
         );
-    }
-    
-    /**
-     * 카드 번호로 카드 종류 판별
-     * 실제로는 BIN 번호로 판별
-     */
-    private CardType determineCardType(String cardNumber) {
-        if (cardNumber.startsWith("9")) {
-            return CardType.SAMSUNG;
-        } else if (cardNumber.startsWith("5")) {
-            return CardType.KB;
-        } else {
-            return CardType.HYUNDAI;
-        }
     }
 }

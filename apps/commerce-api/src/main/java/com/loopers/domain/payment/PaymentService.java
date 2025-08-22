@@ -1,14 +1,10 @@
 package com.loopers.domain.payment;
 
 import com.loopers.domain.common.Money;
-import com.loopers.domain.payment.command.PgCancelCommand;
 import com.loopers.domain.payment.command.PgPaymentCommand;
 import com.loopers.domain.payment.port.PgPaymentPort;
-import com.loopers.domain.payment.result.PgCancelResult;
 import com.loopers.domain.payment.result.PgPaymentResult;
 import com.loopers.domain.payment.vo.CardInfo;
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,21 +54,6 @@ public class PaymentService {
     }
     
     /**
-     * 포인트 결제 처리
-     */
-    public Payment processPointPayment(
-        Long orderId,
-        String userId,
-        Money amount
-    ) {
-        Payment payment = Payment.createPointPayment(orderId, userId, amount);
-        payment.complete();
-        
-        log.info("포인트 결제 완료: orderId={}, amount={}", orderId, amount);
-        return paymentRepository.save(payment);
-    }
-    
-    /**
      * 결제 내역 저장
      */
     public void savePaymentHistory(Long orderId, PaymentResult result) {
@@ -88,9 +69,7 @@ public class PaymentService {
         } else if (result.method() == PaymentMethod.PG) {
             payment = Payment.createPgPayment(orderId, result.userId(), result.amount(), result.transactionId());
         } else {
-            // TODO : COMBINED의 경우 두 개의 별도 Payment 생성이 필요
-            // 현재는 통합 금액으로 PG 결제로 처리 (추후 개선 필요)
-            payment = Payment.createPgPayment(orderId, result.userId(), result.amount(), result.transactionId());
+            throw new IllegalArgumentException("COMBINED 타입은 개별 결제로 처리되어야 합니다.");
         }
         
         if (result.isSuccess()) {
@@ -103,37 +82,27 @@ public class PaymentService {
     }
     
     /**
-     * 결제 취소
+     * 결제 완료 처리 (콜백용)
      */
-    public void cancelPayment(Long paymentId) {
-        Payment payment = paymentRepository.findById(paymentId)
-            .orElseThrow(() -> new CoreException(
-                ErrorType.NOT_FOUND,
-                "결제 정보를 찾을 수 없습니다. paymentId=" + paymentId
-            ));
+    public void completePayment(String transactionId) {
+        Payment payment = paymentRepository.findByTransactionId(transactionId)
+            .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다: " + transactionId));
         
-        if (payment.getPaymentMethod() == PaymentMethod.PG) {
-            PgCancelCommand cancelCommand = new PgCancelCommand(
-                payment.getTransactionId(),
-                payment.getUserId(),
-                payment.getAmount(),
-                "사용자 요청"
-            );
-            
-            PgCancelResult result = pgPaymentPort.cancelPayment(cancelCommand);
-            
-            if (!result.isSuccess()) {
-                throw new CoreException(
-                    ErrorType.INTERNAL_ERROR,
-                    "PG 결제 취소 실패: " + result.failureReason()
-                );
-            }
-        }
-        
-        payment.cancel();
+        payment.complete();
         paymentRepository.save(payment);
+        log.info("결제 완료 처리: transactionId={}", transactionId);
+    }
+    
+    /**
+     * 결제 실패 처리 (콜백용)
+     */
+    public void failPayment(String transactionId, String reason) {
+        Payment payment = paymentRepository.findByTransactionId(transactionId)
+            .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다: " + transactionId));
         
-        log.info("결제 취소 완료: paymentId={}", paymentId);
+        payment.fail(reason);
+        paymentRepository.save(payment);
+        log.warn("결제 실패 처리: transactionId={}, reason={}", transactionId, reason);
     }
     
 }

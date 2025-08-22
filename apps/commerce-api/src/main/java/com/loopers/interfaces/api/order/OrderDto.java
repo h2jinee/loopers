@@ -1,8 +1,11 @@
 package com.loopers.interfaces.api.order;
 
+import com.loopers.application.order.OrderCriteria;
 import com.loopers.application.order.OrderResult;
+import com.loopers.domain.common.Money;
 import com.loopers.domain.order.vo.OrderStatus;
 import com.loopers.domain.order.vo.ReceiverInfo;
+import com.loopers.domain.payment.PgPaymentInfo;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -36,15 +39,43 @@ public class OrderDto {
                 
                 String receiverAddressDetail,
                 
-                // 포인트 사용 금액 (옵션)
                 BigDecimal pointToUse,
-                
-                // PG 결제 정보 (옵션)
-                String cardNumber,
-                String cardHolder,
-                String expiryDate,
-                String cvv
+                String cardType,
+                String cardNo
             ) {
+                
+                public OrderCriteria.Create toCriteria(String userId) {
+                    ReceiverInfo receiverInfo = new ReceiverInfo(
+                        receiverName, receiverPhone, receiverZipCode, 
+                        receiverAddress, receiverAddressDetail
+                    );
+                    
+                    boolean hasPointToUse = pointToUse != null && pointToUse.compareTo(BigDecimal.ZERO) > 0;
+                    boolean hasPgInfo = cardType != null && cardNo != null;
+                    
+                    if (hasPointToUse) {
+                        Money pointMoney = Money.of(pointToUse);
+                        
+                        if (hasPgInfo) {
+                            PgPaymentInfo pgInfo = new PgPaymentInfo(cardType, cardNo);
+                            return OrderCriteria.Create.withPoint(
+                                userId, productId, quantity, receiverInfo, pointMoney, pgInfo
+                            );
+                        } else {
+                            return OrderCriteria.Create.pointOnly(
+                                userId, productId, quantity, receiverInfo, pointMoney
+                            );
+                        }
+                    } else {
+                        if (!hasPgInfo) {
+                            throw new IllegalArgumentException("결제 정보가 필요합니다.");
+                        }
+                        PgPaymentInfo pgInfo = new PgPaymentInfo(cardType, cardNo);
+                        return OrderCriteria.Create.withoutPoint(
+                            userId, productId, quantity, receiverInfo, pgInfo
+                        );
+                    }
+                }
             }
             
             public record Response(

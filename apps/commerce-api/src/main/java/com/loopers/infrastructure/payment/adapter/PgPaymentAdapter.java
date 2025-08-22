@@ -1,15 +1,16 @@
 package com.loopers.infrastructure.payment.adapter;
 
 import com.loopers.domain.payment.CardType;
-import com.loopers.domain.payment.command.PgCancelCommand;
 import com.loopers.domain.payment.command.PgPaymentCommand;
 import com.loopers.domain.payment.port.PgPaymentPort;
-import com.loopers.domain.payment.result.PgCancelResult;
 import com.loopers.domain.payment.result.PgPaymentResult;
 import com.loopers.infrastructure.payment.PaymentGatewayClient;
 import com.loopers.infrastructure.payment.dto.PaymentRequest;
 import com.loopers.infrastructure.payment.dto.PaymentResponse;
 import com.loopers.interfaces.api.ApiResponse;
+import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,8 @@ public class PgPaymentAdapter implements PgPaymentPort {
     private static final String CALLBACK_URL = "http://localhost:8080/api/v1/payments/callback";
     
     @Override
+    @CircuitBreaker(name = "pg-payment", fallbackMethod = "processPaymentFallback")
+    @Retry(name = "pg-payment")
     public PgPaymentResult processPayment(PgPaymentCommand command) {
         try {
             PaymentRequest request = toPaymentRequest(command);
@@ -46,57 +49,51 @@ public class PgPaymentAdapter implements PgPaymentPort {
                 log.warn("PG 결제 실패: reason={}", pgResponse.reason());
                 return PgPaymentResult.failure(pgResponse.reason());
             }
-            
+        } catch (FeignException.BadRequest e) {
+            log.error("잘못된 결제 요청: orderId={}, status={}", command.orderId(), e.status());
+            return PgPaymentResult.failure("잘못된 결제 요청");
+        } catch (FeignException.Unauthorized | FeignException.Forbidden e) {
+            log.error("PG 인증 실패: orderId={}, status={}", command.orderId(), e.status());
+            return PgPaymentResult.failure("PG 인증 실패");
+        } catch (FeignException.ServiceUnavailable | FeignException.GatewayTimeout e) {
+            log.error("PG 서버 일시 장애: orderId={}, status={}", command.orderId(), e.status());
+            return PgPaymentResult.failure("PG 서버 일시 장애");
+        } catch (FeignException e) {
+            log.error("PG 통신 오류: orderId={}, status={}", command.orderId(), e.status(), e);
+            return PgPaymentResult.failure("PG 시스템 오류: " + e.getMessage());
         } catch (Exception e) {
             log.error("PG 결제 처리 중 오류 발생: orderId={}", command.orderId(), e);
-            return PgPaymentResult.failure("PG 시스템 오류: " + e.getMessage());
+            return PgPaymentResult.failure("결제 처리 중 오류 발생");
         }
     }
 
-    /**
-     * Domain Command를 Infrastructure DTO로 변환
-     */
     private PaymentRequest toPaymentRequest(PgPaymentCommand command) {
         return new PaymentRequest(
             command.orderId().toString(),
             mapCardTypeToExternalCode(command.cardInfo().cardType()),
-            command.cardInfo().cardNumber(),
+            command.cardInfo().cardNo(),
             command.amount().amount().longValue(),
             CALLBACK_URL
         );
     }
-    
-    @Override
-    public PgCancelResult cancelPayment(PgCancelCommand command) {
-        try {
-            // TODO: PG 취소 API 구현
-            // PG Simulator에 취소 API가 없으므로 일단 임시 구현
-            log.info("PG 결제 취소 요청: transactionId={}", command.transactionId());
-            
-            // 실제로는 paymentGatewayClient의 취소 API를 호출해야 함
-            // ApiResponse<CancelResponse> response = paymentGatewayClient.cancel(
-            //     command.userId(),
-            //     command.transactionId()
-            // );
-            
-            // 임시 구현
-            return PgCancelResult.success("CANCEL_" + System.currentTimeMillis());
-            
-        } catch (Exception e) {
-            log.error("PG 결제 취소 중 오류 발생: transactionId={}", command.transactionId(), e);
-            return PgCancelResult.failure("PG 취소 실패: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Domain CardType을 PG 시스템 코드로 변환
-     * PG Simulator는 SAMSUNG, KB, HYUNDAI 문자열을 기대함
-     */
+
     private String mapCardTypeToExternalCode(CardType cardType) {
         return switch (cardType) {
             case SAMSUNG -> "SAMSUNG";
             case KB -> "KB";
             case HYUNDAI -> "HYUNDAI";
         };
+    }
+    
+    /**
+     * CircuitBreaker Fallback 메서드
+     * PG 시스템 장애 시 임시 처리
+     */
+    public PgPaymentResult processPaymentFallback(PgPaymentCommand command, Exception ex) {
+        log.error("PG 결제 실패, Fallback 처리: orderId={}, error={}", 
+            command.orderId(), ex.getMessage());
+        
+        // Circuit이 OPEN 상태일 때는 빠른 실패 반환
+        return PgPaymentResult.failure("PG 시스템 일시 장애로 결제할 수 없습니다. 잠시 후 다시 시도해주세요.");
     }
 }

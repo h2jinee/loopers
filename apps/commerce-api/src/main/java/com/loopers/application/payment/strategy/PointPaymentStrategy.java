@@ -32,7 +32,6 @@ public class PointPaymentStrategy implements PaymentStrategy {
         );
     }
     
-    @Override
     public void cancel(Payment payment) {
         // 포인트 환불
         pointService.refundPoint(

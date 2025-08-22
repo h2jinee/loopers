@@ -24,74 +24,26 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/orders")
-@Tag(name = "Order API", description = "주문 관련 API")
-public class OrderController {
+public class OrderController implements OrderV1ApiSpec {
     
     private final OrderFacade orderFacade;
 
-    // TODO?
     @PostMapping
-    @Operation(summary = "주문 생성", description = "새로운 주문을 생성합니다.")
+    @Override
     public ApiResponse<OrderDto.V1.Create.Response> createOrder(
         @RequestHeader("X-USER-ID") String userId,
         @Valid @RequestBody OrderDto.V1.Create.Request request
     ) {
         validateUserId(userId);
         
-        // ReceiverInfo 생성
-        ReceiverInfo receiverInfo = new ReceiverInfo(
-            request.receiverName(),
-            request.receiverPhone(),
-            request.receiverZipCode(),
-            request.receiverAddress(),
-            request.receiverAddressDetail()
-        );
-        
-        // 결제 방식에 따라 OrderCriteria 생성
-        OrderCriteria.Create criteria;
-        
-        if (request.pointToUse() != null && request.pointToUse().compareTo(java.math.BigDecimal.ZERO) > 0) {
-            Money pointToUse = Money.of(request.pointToUse());
-            
-            // PG 정보가 있으면 복합 결제, 없으면 포인트 전액 결제
-            if (request.cardNumber() != null) {
-                PgPaymentInfo pgInfo = new PgPaymentInfo(
-                    request.cardNumber(),
-                    request.cardHolder(),
-                    request.expiryDate(),
-                    request.cvv()
-                );
-                criteria = OrderCriteria.Create.withPoint(
-                    userId, request.productId(), request.quantity(),
-                    receiverInfo, pointToUse, pgInfo
-                );
-            } else {
-                criteria = OrderCriteria.Create.pointOnly(
-                    userId, request.productId(), request.quantity(),
-                    receiverInfo, pointToUse
-                );
-            }
-        } else {
-            // 포인트 미사용 - PG 전액 결제
-            PgPaymentInfo pgInfo = new PgPaymentInfo(
-                request.cardNumber(),
-                request.cardHolder(),
-                request.expiryDate(),
-                request.cvv()
-            );
-            criteria = OrderCriteria.Create.withoutPoint(
-                userId, request.productId(), request.quantity(),
-                receiverInfo, pgInfo
-            );
-        }
-        
+        OrderCriteria.Create criteria = request.toCriteria(userId);
         OrderResult.CreateResult result = orderFacade.createOrder(criteria);
         
         return ApiResponse.success(OrderDto.V1.Create.Response.from(result));
     }
     
     @GetMapping("/{orderId}")
-    @Operation(summary = "주문 상세 조회", description = "특정 주문의 상세 정보를 조회합니다.")
+    @Override
     public ApiResponse<OrderDto.V1.GetDetail.Response> getOrderDetail(
         @RequestHeader("X-USER-ID") String userId,
         @PathVariable Long orderId
@@ -105,7 +57,7 @@ public class OrderController {
     }
     
     @GetMapping
-    @Operation(summary = "주문 목록 조회", description = "사용자의 주문 목록을 조회합니다.")
+    @Override
     public ApiResponse<Page<OrderDto.V1.GetList.Response>> getOrderList(
         @RequestHeader("X-USER-ID") String userId,
         @RequestParam(required = false, defaultValue = "0") Integer page,
