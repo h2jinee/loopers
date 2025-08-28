@@ -2,6 +2,7 @@ package com.loopers.interfaces.api.point;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.loopers.interfaces.api.point.PointDto.V1.GetPoint.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,13 +16,13 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 
 import com.loopers.infrastructure.point.PointJpaRepository;
-import com.loopers.domain.user.UserEntity;
+import com.loopers.domain.user.User;
 import com.loopers.infrastructure.user.UserJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.api.user.UserDto;
+import org.springframework.http.ResponseEntity;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class PointV1ApiE2ETest {
@@ -40,7 +41,7 @@ public class PointV1ApiE2ETest {
 		UserDto.V1.SignUp.Request signUpRequest = new UserDto.V1.SignUp.Request(
 			"h2jinee",
 			"전희진",
-			UserEntity.Gender.F,
+			User.Gender.F,
 			"1997-01-18",
 			"wjsgmlwls97@gmail.com"
 		);
@@ -73,7 +74,7 @@ public class PointV1ApiE2ETest {
 
 			// act
 			ParameterizedTypeReference<ApiResponse<PointDto.V1.GetPoint.Response>> responseType = new ParameterizedTypeReference<>() {};
-			ResponseEntity<ApiResponse<PointDto.V1.GetPoint.Response>> response =
+			ResponseEntity<ApiResponse<Response>> response =
 				testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, new HttpEntity<>(headers), responseType);
 
 			// assert
@@ -114,7 +115,7 @@ public class PointV1ApiE2ETest {
 	 */
 	@DisplayName("POST /api/v1/points/charge")
 	@Nested
-	class chargeUserPoint {
+	class charge {
 		private final String ENDPOINT = "/api/v1/points/charge";
 
 		@DisplayName("존재하는 유저가 1000원을 충전할 경우, 충전된 보유 총량을 응답으로 반환한다.")

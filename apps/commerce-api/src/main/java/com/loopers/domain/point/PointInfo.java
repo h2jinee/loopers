@@ -1,25 +1,74 @@
 package com.loopers.domain.point;
 
+import java.math.BigDecimal;
+import java.time.ZonedDateTime;
+
 public class PointInfo {
     
+    /**
+     * 포인트 충전 결과
+     */
     public record ChargeResult(
         String userId,
-        Long balance
+        BigDecimal previousBalance,
+        BigDecimal chargedAmount,
+        BigDecimal newBalance,
+        ZonedDateTime chargedAt
     ) {
-        public static ChargeResult from(PointEntity point) {
+        public static ChargeResult from(Point point) {
+            // 충전 후 잔액에서 충전 금액을 빼서 이전 잔액 계산
             return new ChargeResult(
                 point.getUserId(),
-                point.getBalance().amount().longValue()
+                point.getBalance().amount(),
+                BigDecimal.ZERO, // 실제 충전 금액은 히스토리에서
+                point.getBalance().amount(),
+                point.getCreatedAt()
+            );
+        }
+        
+        public static ChargeResult from(Point point, PointHistory history) {
+            BigDecimal newBalance = point.getBalance().amount();
+            BigDecimal chargedAmount = history.getAmount().amount();
+            BigDecimal previousBalance = newBalance.subtract(chargedAmount);
+            
+            return new ChargeResult(
+                point.getUserId(),
+                previousBalance,
+                chargedAmount,
+                newBalance,
+                history.getCreatedAt()
             );
         }
     }
     
+    /**
+     * 포인트 상세 정보
+     */
     public record Detail(
+        String userId,
+        BigDecimal balance,
+        ZonedDateTime createdAt,
+        ZonedDateTime updatedAt
+    ) {
+        public static Detail from(Point point) {
+            return new Detail(
+                point.getUserId(),
+                point.getBalance().amount(),
+                point.getCreatedAt(),
+                point.getUpdatedAt()
+            );
+        }
+    }
+
+    /**
+     * 포인트 정보
+     */
+    public record Charged(
         String userId,
         Long balance
     ) {
-        public static Detail from(PointEntity point) {
-            return new Detail(
+        public static Charged from(Point point) {
+            return new Charged(
                 point.getUserId(),
                 point.getBalance().amount().longValue()
             );

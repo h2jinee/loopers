@@ -1,16 +1,25 @@
 package com.loopers.application.like;
 
+import com.loopers.domain.like.Like;
 import com.loopers.domain.like.LikeCommand;
 import com.loopers.domain.like.LikeInfo;
-import com.loopers.domain.like.LikedProductDto;
 import com.loopers.domain.like.LikeService;
+import com.loopers.domain.product.Product;
+import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductCountService;
+import com.loopers.domain.brand.BrandInfo;
+import com.loopers.domain.brand.BrandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -18,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class LikeFacade {
 
     private final LikeService likeService;
+    private final ProductService productService;
+    private final BrandService brandService;
     private final ProductCountService productCountService;
 
     /**
@@ -85,22 +96,66 @@ public class LikeFacade {
      * 사용자가 좋아요한 상품 목록 조회
      */
     public Page<LikeResult.LikedProduct> getLikedProducts(LikeCriteria.GetLikedProducts criteria) {
-        LikeCommand.GetList command = criteria.toCommand();
         PageRequest pageRequest = PageRequest.of(criteria.page(), criteria.size());
         
-        // 좋아요한 상품 목록 조회
-        Page<LikedProductDto> likedProducts = likeService.getLikedProducts(command, pageRequest);
+        // 1. Like 엔티티만 조회 (도메인 경계 유지)
+        Page<Like> likes = likeService.getUserLikes(criteria.userId(), pageRequest);
         
-        return likedProducts.map(dto -> new LikeResult.LikedProduct(
-            dto.getProductId(),
-            dto.getBrandId(),
-            dto.getBrandNameKo(),
-            dto.getProductNameKo(),
-            dto.getDescription(),
-            dto.getPrice(),
-            dto.getLikeCount(),
-            dto.isAvailable(),
-            dto.getLikedAt()
-        ));
+        if (likes.isEmpty()) {
+            return Page.empty(pageRequest);
+        }
+        
+        // 2. 상품 ID 추출
+        List<Long> productIds = likes.stream()
+            .map(Like::getProductId)
+            .collect(Collectors.toList());
+        
+        // 3. 상품 정보 일괄 조회 (N+1 방지)
+        List<Product> products = productService.getProductsByIds(productIds);
+        Map<Long, Product> productMap = products.stream()
+            .collect(Collectors.toMap(Product::getId, p -> p));
+        
+        // 4. 브랜드 ID 추출 및 브랜드 정보 일괄 조회
+        List<Long> brandIds = products.stream()
+            .map(Product::getBrandId)
+            .distinct()
+            .collect(Collectors.toList());
+        
+        Map<Long, BrandInfo> brandMap = brandService.getBrandsByIds(brandIds);
+        
+        // 5. 조합하여 Result 생성
+        List<LikeResult.LikedProduct> likedProducts = likes.stream()
+            .map(like -> {
+                Product product = productMap.get(like.getProductId());
+                if (product == null) {
+                    log.warn("좋아요한 상품을 찾을 수 없음 - productId: {}", like.getProductId());
+                    return null;
+                }
+                
+                BrandInfo brand = brandMap.get(product.getBrandId());
+                if (brand == null) {
+                    log.warn("브랜드를 찾을 수 없음 - brandId: {}", product.getBrandId());
+                    return null;
+                }
+                
+                // LikeInfo.LikedProduct 생성 후 LikeResult.LikedProduct로 변환
+                LikeInfo.LikedProduct likeInfo = LikeInfo.LikedProduct.of(
+                    product.getId(),
+                    brand.brandId(),
+                    brand.nameKo(),
+                    product.getNameKo(),
+                    product.getDescription(),
+                    product.getPrice().amount(),
+                    product.getLikeCount(),
+                    product.getStatus(),
+                    like.getCreatedAt()
+                );
+                
+                return LikeResult.LikedProduct.from(likeInfo);
+            })
+            .filter(item -> item != null)
+            .collect(Collectors.toList());
+        
+        return new PageImpl<>(likedProducts, pageRequest, likes.getTotalElements());
     }
 }

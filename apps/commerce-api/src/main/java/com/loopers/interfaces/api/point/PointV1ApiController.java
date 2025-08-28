@@ -28,11 +28,11 @@ public class PointV1ApiController implements PointV1ApiSpec {
 
     @PostMapping("/charge")
     @Override
-    public ApiResponse<PointDto.V1.Charge.Response> chargeUserPoint(
+    public ApiResponse<PointDto.V1.Charge.Response> charge(
         @RequestBody @Valid PointDto.V1.Charge.Request request
     ) {
         PointCriteria.Charge criteria = new PointCriteria.Charge(request.userId(), request.amount());
-        PointResult.ChargeResult result = pointFacade.chargeUserPoint(criteria);
+        PointResult.Charged result = pointFacade.charge(criteria);
 
         PointDto.V1.Charge.Response response = PointDto.V1.Charge.Response.from(result);
         return ApiResponse.success(response);

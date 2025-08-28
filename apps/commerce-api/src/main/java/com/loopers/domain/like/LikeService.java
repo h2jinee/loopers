@@ -1,6 +1,5 @@
 package com.loopers.domain.like;
 
-import com.loopers.infrastructure.like.LikeJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -8,19 +7,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class LikeService {
     
-    private final LikeJpaRepository likeJpaRepository;
+    private final LikeRepository likeRepository;
 
     @Transactional
     public boolean addLike(LikeCommand.Toggle command) {
         try {
-            LikeEntity like = new LikeEntity(command.userId(), command.productId());
-            likeJpaRepository.save(like);
+            Like like = new Like(command.userId(), command.productId());
+            likeRepository.save(like);
             return true;
         } catch (Exception e) {
             // 다른 스레드가 먼저 insert한 경우
@@ -32,31 +30,20 @@ public class LikeService {
     
     @Transactional
     public boolean removeLike(LikeCommand.Toggle command) {
-        likeJpaRepository.deleteByUserIdAndProductId(command.userId(), command.productId());
+        likeRepository.deleteByUserIdAndProductId(command.userId(), command.productId());
         return true; // 삭제 성공
     }
     
-    @Transactional(readOnly = true)
     public boolean isLiked(LikeCommand.IsLiked command) {
-        return likeJpaRepository.existsByUserIdAndProductId(command.userId(), command.productId());
+        return likeRepository.existsByUserIdAndProductId(command.userId(), command.productId());
     }
     
     /**
-     * 좋아요한 상품 목록 조회
+     * 사용자가 좋아요한 목록 조회
      */
-    @Transactional(readOnly = true)
-    public Page<LikedProductDto> getLikedProducts(LikeCommand.GetList command, Pageable pageable) {
-        log.debug("좋아요한 상품 목록 조회 시작 - userId: {}, page: {}, size: {}", 
-                  command.userId(), pageable.getPageNumber(), pageable.getPageSize());
-        
-        Page<LikedProductDto> result = likeJpaRepository.findLikedProductsByUserId(
-            command.userId(), 
-            pageable
-        );
-        
-        log.debug("좋아요한 상품 목록 조회 완료 - 조회된 상품 수: {}, 전체 페이지: {}", 
-                  result.getNumberOfElements(), result.getTotalPages());
-        
-        return result;
+    public Page<Like> getUserLikes(String userId, Pageable pageable) {
+        log.debug("좋아요 목록 조회 - userId: {}, page: {}, size: {}", 
+                  userId, pageable.getPageNumber(), pageable.getPageSize());
+        return likeRepository.findByUserId(userId, pageable);
     }
 }

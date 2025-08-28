@@ -1,7 +1,6 @@
 package com.loopers.application.point;
 
 import com.loopers.domain.point.PointCommand;
-import com.loopers.domain.point.vo.ChargePoint;
 
 public class PointCriteria {
     
@@ -12,7 +11,7 @@ public class PointCriteria {
         public PointCommand.Charge toCommand() {
             return new PointCommand.Charge(
                 userId,
-                new ChargePoint(amount)
+                new com.loopers.domain.point.vo.Charge(amount)
             );
         }
     }

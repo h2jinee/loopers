@@ -1,8 +1,12 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Rate } from 'k6/metrics';
+import { Rate, Trend, Counter, Gauge } from 'k6/metrics';
 
 const errorRate = new Rate('errors');
+const checkRate = new Rate('checks');
+const requestDuration = new Trend('http_req_duration_custom');
+const requestCounter = new Counter('http_reqs_custom');
+
 const BASE_URL = 'http://localhost:8080/api/v1';
 
 // 상품 API만 테스트
@@ -26,17 +30,24 @@ export default function () {
     `${BASE_URL}/products?page=${pageNum}&size=10&sort=latest`
   );
   
+  requestCounter.add(1);
+  requestDuration.add(listResponse.timings.duration);
+  
   const listOk = check(listResponse, {
     'list status 200': (r) => r.status === 200,
   });
+  checkRate.add(listOk ? 1 : 0);
   
   const listTimeOk = check(listResponse, {
     'list time < 500ms': (r) => r.timings.duration < 500,
   });
+  checkRate.add(listTimeOk ? 1 : 0);
   
   if (!listOk) {
     errorRate.add(1);
     console.log(`List API failed: ${listResponse.status} - ${listResponse.body?.substring(0, 100)}`);
+  } else {
+    errorRate.add(0);
   }
   sleep(0.5);
 
@@ -46,17 +57,24 @@ export default function () {
     `${BASE_URL}/products/${productId}`
   );
   
+  requestCounter.add(1);
+  requestDuration.add(detailResponse.timings.duration);
+  
   const detailOk = check(detailResponse, {
     'detail status 200': (r) => r.status === 200,
   });
+  checkRate.add(detailOk ? 1 : 0);
   
   const detailTimeOk = check(detailResponse, {
     'detail time < 300ms': (r) => r.timings.duration < 300,
   });
+  checkRate.add(detailTimeOk ? 1 : 0);
   
   if (!detailOk) {
     errorRate.add(1);
     console.log(`Detail API failed for product ${productId}: ${detailResponse.status}`);
+  } else {
+    errorRate.add(0);
   }
   sleep(0.5);
 }

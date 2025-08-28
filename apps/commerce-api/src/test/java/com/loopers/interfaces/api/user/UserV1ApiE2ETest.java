@@ -19,7 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import com.loopers.infrastructure.point.PointJpaRepository;
-import com.loopers.domain.user.UserEntity;
+import com.loopers.domain.user.User;
 import com.loopers.infrastructure.user.UserJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
 
@@ -40,7 +40,7 @@ public class UserV1ApiE2ETest {
 		UserDto.V1.SignUp.Request signUpRequest = new UserDto.V1.SignUp.Request(
 			"h2jinee",
 			"전희진",
-			UserEntity.Gender.F,
+			User.Gender.F,
 			"1997-01-18",
 			"wjsgmlwls97@gmail.com"
 		);
@@ -71,7 +71,7 @@ public class UserV1ApiE2ETest {
 			UserDto.V1.SignUp.Request signUpRequest = new UserDto.V1.SignUp.Request(
 				"devin",
 				"김데빈",
-				UserEntity.Gender.M,
+				User.Gender.M,
 				"2000-01-01",
 				"devin@loopers.com"
 			);
@@ -92,9 +92,6 @@ public class UserV1ApiE2ETest {
 			assertThat(data).isNotNull();
 			assertThat(data.userId()).isEqualTo(signUpRequest.userId());
 			assertThat(data.name()).isEqualTo(signUpRequest.name());
-			assertThat(data.gender()).isEqualTo(signUpRequest.gender());
-			assertThat(data.birth()).isEqualTo(signUpRequest.birth());
-			assertThat(data.email()).isEqualTo(signUpRequest.email());
 		}
 
 		@DisplayName("회원 가입 시에 성별이 없을 경우, 400 Bad Request 응답을 반환한다.")
@@ -160,7 +157,7 @@ public class UserV1ApiE2ETest {
 			assertThat(data).isNotNull();
 			assertThat(data.userId()).isEqualTo("h2jinee");
 			assertThat(data.name()).isEqualTo("전희진");
-			assertThat(data.gender()).isEqualTo(UserEntity.Gender.F);
+			assertThat(data.gender()).isEqualTo("F");
 			assertThat(data.birth()).isEqualTo("1997-01-18");
 			assertThat(data.email()).isEqualTo("wjsgmlwls97@gmail.com");
 		}

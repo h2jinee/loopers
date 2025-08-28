@@ -1,98 +1,68 @@
 package com.loopers.domain.order;
 
 import com.loopers.domain.common.Money;
-import com.loopers.domain.product.ProductDomainInfo;
+import com.loopers.domain.product.ProductInfo;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class OrderService {
     
-    private final StockReservationRepository stockReservationRepository;
     private final OrderRepository orderRepository;
-
-    public OrderCreationResult createOrderWithoutStockCheck(OrderCommand.CreateWithProduct command) {
-        ProductDomainInfo product = command.product();
-        
-        OrderEntity order = new OrderEntity(command.userId(), command.receiverInfo());
-        
-        Money totalPrice = product.getTotalPrice();
-        OrderLineEntity orderLine = new OrderLineEntity(
-            product.id(),
-            product.nameKo(),
-            command.quantity(),
-            totalPrice
-        );
-        order.addOrderLine(orderLine);
-        
-        return new OrderCreationResult(order, command.productId(), command.quantity());
-    }
     
-    public StockReservationEntity createStockReservation(Long orderId, Long productId, Integer quantity) {
-        return new StockReservationEntity(orderId, productId, quantity);
-    }
-    
-    @Transactional
-    public StockReservationEntity saveStockReservation(StockReservationEntity reservation) {
-        return stockReservationRepository.save(reservation);
-    }
-    
-    public List<StockReservationEntity> findStockReservationsByOrderId(Long orderId) {
-        return stockReservationRepository.findByOrderId(orderId);
-    }
-    
-    @Transactional
-    public void confirmStockReservations(Long orderId) {
-        List<StockReservationEntity> reservations = stockReservationRepository.findByOrderId(orderId);
+    public Order createOrder(OrderCommand.CreateWithProduct command) {
+        // 1. 주문 엔티티 생성
+        Order order = new Order(command.userId(), command.receiverInfo());
         
-        reservations.forEach(StockReservationEntity::confirm);
-        stockReservationRepository.saveAll(reservations);
-    }
-    
-    @Transactional
-    public void cancelStockReservations(Long orderId) {
-        List<StockReservationEntity> reservations = stockReservationRepository.findByOrderId(orderId);
+        // 2. 상품 정보 추출
+        ProductInfo product = command.product();
+        Money totalPrice = product.totalPrice();
         
-        reservations.forEach(StockReservationEntity::cancel);
-        stockReservationRepository.saveAll(reservations);
-    }
-
-    public OrderEntity saveOrder(OrderEntity order) {
+        // 3. 주문 라인 추가
+        order.addOrderLine(product.productId(), product.nameKo(), command.quantity(), totalPrice);
+        
+        // 4. 주문 저장
         return orderRepository.save(order);
     }
-
-    public OrderEntity getUserOrder(OrderCommand.GetDetail command) {
-        return orderRepository.findByIdAndUserId(command.orderId(), command.userId())
-            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "주문을 찾을 수 없습니다."));
+    
+    /**
+     * 주문 조회
+     */
+    public Order findById(Long orderId) {
+        return orderRepository.findById(orderId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
+                "주문을 찾을 수 없습니다. orderId: " + orderId));
     }
     
-    public Page<OrderEntity> getUserOrders(OrderCommand.GetList command) {
-        Pageable pageable = PageRequest.of(
-            command.page(),
-            command.size(),
-            Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-        
-        return orderRepository.findByUserId(command.userId(), pageable);
+    /**
+     * 주문 저장
+     */
+    @Transactional
+    public Order save(Order order) {
+        return orderRepository.save(order);
     }
     
-    public void updateOrder(OrderEntity order) {
+    /**
+     * 주문 상태를 PAID로 변경 (결제 성공 콜백)
+     */
+    @Transactional
+    public void updateOrderStatusToPaid(Long orderId) {
+        Order order = findById(orderId);
+        order.markAsPaid();
         orderRepository.save(order);
     }
     
-    public record OrderCreationResult(
-        OrderEntity order,
-        Long productId,
-        Integer quantity
-    ) {}
+    /**
+     * 주문 상태를 FAILED로 변경 (결제 실패 콜백)
+     */
+    @Transactional
+    public void updateOrderStatusToPaymentFailed(Long orderId) {
+        Order order = findById(orderId);
+        order.markAsPaymentFailed();
+        orderRepository.save(order);
+    }
 }

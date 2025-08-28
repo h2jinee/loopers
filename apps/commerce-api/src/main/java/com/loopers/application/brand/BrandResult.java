@@ -12,14 +12,14 @@ public class BrandResult {
         String profileImageUrl,
         Integer productCount
     ) {
-        public static Detail from(BrandInfo.Detail domainInfo) {
+        public static Detail from(BrandInfo brandInfo, Integer productCount) {
             return new Detail(
-                domainInfo.brandId(),
-                domainInfo.nameKo(),
-                domainInfo.nameEn(),
-                domainInfo.coverImageUrl(),
-                domainInfo.profileImageUrl(),
-                domainInfo.productCount()
+                brandInfo.brandId(),
+                brandInfo.nameKo(),
+                brandInfo.nameEn(),
+                brandInfo.coverImageUrl(),
+                brandInfo.profileImageUrl(),
+                productCount
             );
         }
     }
@@ -30,12 +30,12 @@ public class BrandResult {
         String nameEn,
         String profileImageUrl
     ) {
-        public static Summary from(BrandInfo.Summary domainInfo) {
+        public static Summary from(BrandInfo brandInfo) {
             return new Summary(
-                domainInfo.brandId(),
-                domainInfo.nameKo(),
-                domainInfo.nameEn(),
-                domainInfo.profileImageUrl()
+                brandInfo.brandId(),
+                brandInfo.nameKo(),
+                brandInfo.nameEn(),
+                brandInfo.profileImageUrl()
             );
         }
     }

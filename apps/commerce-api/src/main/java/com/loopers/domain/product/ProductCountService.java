@@ -24,8 +24,8 @@ public class ProductCountService {
     })
     public void updateLikeCountPessimistic(ProductCountCommand.UpdateLikeCount command) {
         // 1. 락 획득
-        ProductCountEntity productCount = productCountRepository.findByProductIdWithPessimisticLock(command.productId())
-            .orElseGet(() -> new ProductCountEntity(command.productId()));
+        ProductCount productCount = productCountRepository.findByProductIdWithLock(command.productId())
+            .orElseGet(() -> new ProductCount(command.productId()));
         
         // 2. 락 획득 후 COUNT 쿼리 실행
         Long likeCount = productCountRepository.countLikesByProductId(command.productId());
@@ -45,9 +45,9 @@ public class ProductCountService {
         @CacheEvict(value = "productList", allEntries = true)
     })
     public Long incrementLikeCountWithLock(Long productId) {
-        ProductCountEntity productCount = productCountRepository
-            .findByProductIdWithPessimisticLock(productId)
-            .orElseGet(() -> new ProductCountEntity(productId));
+        ProductCount productCount = productCountRepository
+            .findByProductIdWithLock(productId)
+            .orElseGet(() -> new ProductCount(productId));
         
         productCount.incrementLikeCount();
         productCountRepository.save(productCount);
@@ -60,7 +60,7 @@ public class ProductCountService {
     
     /**
      * 좋아요 카운트 감소 (비관적 락)
-     * 음수 방지 로직은 ProductCountEntity 내부에서 처리
+     * 음수 방지 로직은 ProductCount 내부에서 처리
      * 캐시 무효화 포함
      */
     @Transactional
@@ -69,8 +69,8 @@ public class ProductCountService {
         @CacheEvict(value = "productList", allEntries = true)
     })
     public Long decrementLikeCountWithLock(Long productId) {
-        ProductCountEntity productCount = productCountRepository
-            .findByProductIdWithPessimisticLock(productId)
+        ProductCount productCount = productCountRepository
+            .findByProductIdWithLock(productId)
             .orElseThrow(() -> new IllegalStateException("상품 카운트 정보가 없습니다."));
         
         productCount.decrementLikeCount();
@@ -87,7 +87,7 @@ public class ProductCountService {
      */
     public Long getLikeCount(Long productId) {
         return productCountRepository.findByProductId(productId)
-            .map(ProductCountEntity::getLikeCount)
+            .map(ProductCount::getLikeCount)
             .orElse(0L);
     }
 }

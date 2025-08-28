@@ -1,6 +1,6 @@
 package com.loopers.domain.product;
 
-import com.loopers.domain.brand.BrandEntity;
+import com.loopers.domain.brand.Brand;
 import com.loopers.domain.product.vo.ProductStatus;
 import java.math.BigDecimal;
 
@@ -17,7 +17,7 @@ public record ProductWithBrandDto(
     String brandNameKo,
     String brandNameEn
 ) {
-    public ProductWithBrandDto(ProductEntity product, BrandEntity brand, Long likeCount) {
+    public ProductWithBrandDto(Product product, Brand brand, Long likeCount) {
         this(
             product.getId(),
             product.getBrandId(),

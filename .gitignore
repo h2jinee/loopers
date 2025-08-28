@@ -38,3 +38,9 @@ out/
 
 ### Kotlin ###
 .kotlin
+/.claude/settings.local.json
+
+### k6 ###
+k6.exe
+k6-scripts/results/
+*.json

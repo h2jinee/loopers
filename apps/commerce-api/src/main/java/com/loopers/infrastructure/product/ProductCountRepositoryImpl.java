@@ -1,6 +1,6 @@
 package com.loopers.infrastructure.product;
 
-import com.loopers.domain.product.ProductCountEntity;
+import com.loopers.domain.product.ProductCount;
 import com.loopers.domain.product.ProductCountRepository;
 import com.loopers.infrastructure.like.LikeJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,17 +16,17 @@ public class ProductCountRepositoryImpl implements ProductCountRepository {
     private final LikeJpaRepository likeJpaRepository;
     
     @Override
-    public ProductCountEntity save(ProductCountEntity productCount) {
+    public ProductCount save(ProductCount productCount) {
         return productCountJpaRepository.save(productCount);
     }
     
     @Override
-    public Optional<ProductCountEntity> findByProductId(Long productId) {
+    public Optional<ProductCount> findByProductId(Long productId) {
         return productCountJpaRepository.findByProductId(productId);
     }
     
     @Override
-    public Optional<ProductCountEntity> findByProductIdWithPessimisticLock(Long productId) {
+    public Optional<ProductCount> findByProductIdWithLock(Long productId) {
         return productCountJpaRepository.findByProductIdWithPessimisticLock(productId);
     }
     

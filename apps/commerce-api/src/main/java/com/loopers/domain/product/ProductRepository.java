@@ -7,23 +7,19 @@ import java.util.Optional;
 
 public interface ProductRepository {
     
-    Optional<ProductEntity> findById(Long productId);
+    Optional<Product> findById(Long productId);
     
-    List<ProductEntity> findAllByIdIn(List<Long> productIds);
+    Page<Product> findAllWithLikeCount(Pageable pageable);
     
-    Page<ProductEntity> findAllWithLikeCount(Pageable pageable);
+    Page<Product> findByBrandIdWithLikeCount(Long brandId, Pageable pageable);
     
-    Page<ProductEntity> findByBrandIdWithLikeCount(Long brandId, Pageable pageable);
-    
-    Page<ProductWithBrandDto> findAllProductsWithBrand(Pageable pageable);
-    
-    Page<ProductWithBrandDto> findProductsWithBrandByBrandId(Long brandId, Pageable pageable);
-    
-    List<ProductStockInfo> findProductStockInfoByIds(List<Long> productIds);
-    
-    ProductEntity save(ProductEntity product);
+    List<Product> findByIdIn(List<Long> productIds);
+
+    Product save(Product product);
     
     void incrementLikeCount(Long productId);
     
     void decrementLikeCount(Long productId);
+    
+    boolean existsById(Long id);
 }

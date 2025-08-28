@@ -1,72 +1,110 @@
 package com.loopers.infrastructure.product;
 
-import com.loopers.domain.product.*;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.loopers.domain.product.Product;
+import com.loopers.domain.product.ProductRepository;
+import com.loopers.domain.product.ProductWithBrandDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Repository;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
-@Component
+@Slf4j
+@Repository
 @RequiredArgsConstructor
 public class ProductRepositoryImpl implements ProductRepository {
-
-    private final ProductJpaRepository productJpaRepository;
+    
+    private static final String PRODUCT_KEY_PREFIX = "product:";
+    private static final String NULL_VALUE = "__NULL__";
+    private static final long CACHE_TTL_MINUTES = 5;
+    
+    private final ProductJpaRepository jpaRepository;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
     
     @Override
-    public Optional<ProductEntity> findById(Long productId) {
-        return productJpaRepository.findById(productId);
-    }
-    
-    @Override
-    public List<ProductEntity> findAllByIdIn(List<Long> productIds) {
-        return productJpaRepository.findAllByIdIn(productIds);
-    }
-
-    @Override
-    public Page<ProductEntity> findAllWithLikeCount(Pageable pageable) {
-        return productJpaRepository.findAllByOrderByLikeCountDesc(pageable);
-    }
-    
-    @Override
-    public Page<ProductEntity> findByBrandIdWithLikeCount(Long brandId, Pageable pageable) {
-        return productJpaRepository.findByBrandIdOrderByLikeCountDesc(brandId, pageable);
-    }
-    
-    @Override
-    public Page<ProductWithBrandDto> findAllProductsWithBrand(Pageable pageable) {
-        return productJpaRepository.findAllProductsWithBrand(pageable);
-    }
-    
-    @Override
-    public Page<ProductWithBrandDto> findProductsWithBrandByBrandId(Long brandId, Pageable pageable) {
-        return productJpaRepository.findProductsWithBrandByBrandId(brandId, pageable);
-    }
-    
-    @Override
-    public List<ProductStockInfo> findProductStockInfoByIds(List<Long> productIds) {
-        if (productIds == null || productIds.isEmpty()) {
-            return Collections.emptyList();
+    public Optional<Product> findById(Long id) {
+        String key = PRODUCT_KEY_PREFIX + id;
+        
+        try {
+            String cached = redisTemplate.opsForValue().get(key);
+            
+            if (NULL_VALUE.equals(cached)) {
+                return Optional.empty();
+            }
+            
+            if (cached != null) {
+                return jpaRepository.findById(id);
+            }
+            
+            Optional<Product> product = jpaRepository.findById(id);
+            
+            if (product.isEmpty()) {
+                redisTemplate.opsForValue().set(key, NULL_VALUE, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+                return Optional.empty();
+            }
+            
+            ProductCacheDto cacheDto = ProductCacheDto.from(product.get());
+            String serialized = objectMapper.writeValueAsString(cacheDto);
+            redisTemplate.opsForValue().set(key, serialized, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            
+            return product;
+            
+        } catch (JsonProcessingException e) {
+            log.error("캐시 처리 실패: productId={}", id, e);
+            return jpaRepository.findById(id);
         }
-        return productJpaRepository.findProductStockInfoByIds(productIds);
-    }
-
-    @Override
-    public ProductEntity save(ProductEntity product) {
-        return productJpaRepository.save(product);
     }
     
     @Override
-    @Transactional
+    public Page<Product> findByBrandIdWithLikeCount(Long brandId, Pageable pageable) {
+        return jpaRepository.findByBrandIdOrderByLikeCountDesc(brandId, pageable);
+    }
+    
+    @Override
+    public Page<Product> findAllWithLikeCount(Pageable pageable) {
+        return jpaRepository.findAllByOrderByLikeCountDesc(pageable);
+    }
+    
+    @Override
+    public Product save(Product product) {
+        Product saved = jpaRepository.save(product);
+        evictCache(saved.getId());
+        return saved;
+    }
+    
+    @Override
     public void incrementLikeCount(Long productId) {
-        productJpaRepository.incrementLikeCount(productId);
+        jpaRepository.incrementLikeCount(productId);
+        evictCache(productId);
     }
     
     @Override
-    @Transactional
     public void decrementLikeCount(Long productId) {
-        productJpaRepository.decrementLikeCount(productId);
+        jpaRepository.decrementLikeCount(productId);
+        evictCache(productId);
+    }
+    
+    @Override
+    public List<Product> findByIdIn(List<Long> productIds) {
+        return jpaRepository.findAllById(productIds);
+    }
+    
+    @Override
+    public boolean existsById(Long id) {
+        String key = PRODUCT_KEY_PREFIX + id;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key)) || jpaRepository.existsById(id);
+    }
+    
+    public void evictCache(Long productId) {
+        String key = PRODUCT_KEY_PREFIX + productId;
+        redisTemplate.delete(key);
     }
 }

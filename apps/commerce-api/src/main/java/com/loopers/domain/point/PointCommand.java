@@ -1,22 +1,31 @@
 package com.loopers.domain.point;
 
 import com.loopers.domain.common.Money;
-import com.loopers.domain.point.vo.ChargePoint;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
 public class PointCommand {
+    
+    /**
+     * 포인트 충전
+     */
     public record Charge(
         String userId,
-        ChargePoint amount
+        com.loopers.domain.point.vo.Charge amount
     ) {
         public Charge {
             if (userId == null || userId.isBlank()) {
                 throw new CoreException(ErrorType.BAD_REQUEST, "사용자 ID는 필수입니다.");
             }
+            if (amount == null) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "충전 금액은 필수입니다.");
+            }
         }
     }
     
+    /**
+     * 포인트 사용
+     */
     public record Use(
         String userId,
         Money amount,
@@ -34,8 +43,10 @@ public class PointCommand {
             }
         }
     }
-
     
+    /**
+     * 포인트 조회
+     */
     public record GetOne(
         String userId
     ) {
@@ -46,6 +57,9 @@ public class PointCommand {
         }
     }
     
+    /**
+     * 포인트 초기화
+     */
     public record Initialize(
         String userId
     ) {

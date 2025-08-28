@@ -1,8 +1,11 @@
 package com.loopers.interfaces.api.order;
 
+import com.loopers.application.order.OrderCriteria;
 import com.loopers.application.order.OrderResult;
+import com.loopers.domain.common.Money;
 import com.loopers.domain.order.vo.OrderStatus;
 import com.loopers.domain.order.vo.ReceiverInfo;
+import com.loopers.domain.payment.PgPaymentInfo;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -11,7 +14,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class OrderDto {
-    
     public static class V1 {
         
         public static class Create {
@@ -35,16 +37,44 @@ public class OrderDto {
                 @NotBlank(message = "주소는 필수입니다.")
                 String receiverAddress,
                 
-                String receiverAddressDetail
+                String receiverAddressDetail,
+                
+                BigDecimal pointToUse,
+                String cardType,
+                String cardNo
             ) {
-                public ReceiverInfo toReceiverInfo() {
-                    return new ReceiverInfo(
-                        receiverName,
-                        receiverPhone,
-                        receiverZipCode,
-                        receiverAddress,
-                        receiverAddressDetail
+                
+                public OrderCriteria.Create toCriteria(String userId) {
+                    ReceiverInfo receiverInfo = new ReceiverInfo(
+                        receiverName, receiverPhone, receiverZipCode, 
+                        receiverAddress, receiverAddressDetail
                     );
+                    
+                    boolean hasPointToUse = pointToUse != null && pointToUse.compareTo(BigDecimal.ZERO) > 0;
+                    boolean hasPgInfo = cardType != null && cardNo != null;
+                    
+                    if (hasPointToUse) {
+                        Money pointMoney = Money.of(pointToUse);
+                        
+                        if (hasPgInfo) {
+                            PgPaymentInfo pgInfo = new PgPaymentInfo(cardType, cardNo);
+                            return OrderCriteria.Create.withPoint(
+                                userId, productId, quantity, receiverInfo, pointMoney, pgInfo
+                            );
+                        } else {
+                            return OrderCriteria.Create.pointOnly(
+                                userId, productId, quantity, receiverInfo, pointMoney
+                            );
+                        }
+                    } else {
+                        if (!hasPgInfo) {
+                            throw new IllegalArgumentException("결제 정보가 필요합니다.");
+                        }
+                        PgPaymentInfo pgInfo = new PgPaymentInfo(cardType, cardNo);
+                        return OrderCriteria.Create.withoutPoint(
+                            userId, productId, quantity, receiverInfo, pgInfo
+                        );
+                    }
                 }
             }
             
@@ -151,6 +181,42 @@ public class OrderDto {
                         summary.firstItemName(),
                         summary.orderedAt()
                     );
+                }
+            }
+        }
+
+        public static class UpdateStatus {
+            public record Request(
+                @NotBlank(message = "주문 상태는 필수입니다.")
+                String status
+            ) {}
+        }
+        
+        public static class Statistics {
+            public record Response(
+                Long totalOrderCount,
+                Long totalOrderAmount,
+                ZonedDateTime lastOrderDate
+            ) {
+                public static Response from(OrderResult.Statistics statistics) {
+                    return new Response(
+                        statistics.totalOrderCount(),
+                        statistics.totalOrderAmount(),
+                        statistics.lastOrderDate()
+                    );
+                }
+            }
+        }
+        
+        public static class RecentOrders {
+            public record Response(
+                List<GetList.Response> orders
+            ) {
+                public static Response from(OrderResult.RecentOrders recentOrders) {
+                    var orderList = recentOrders.orders().stream()
+                        .map(GetList.Response::from)
+                        .toList();
+                    return new Response(orderList);
                 }
             }
         }

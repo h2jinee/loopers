@@ -64,7 +64,7 @@ classDiagram
         +historyId: Long
         +userId: Long
         +amount: Money
-        +type: PointTransactionType
+        +type: TransactionType
         +description: String
         +orderId: Long
         +createdAt: DateTime
@@ -372,9 +372,9 @@ classDiagram
 
     class OrderStatus {
         <<enumeration>>
-        PAYMENT_PENDING
-        PAYMENT_COMPLETED
-        PAYMENT_FAILED
+        PENDING
+        COMPLETED
+        FAILED
         PREPARING_SHIPMENT
         SHIPPING
         DELIVERED
@@ -410,7 +410,7 @@ classDiagram
         DETAIL
     }
 
-    class PointTransactionType {
+    class TransactionType {
         <<enumeration>>
         CHARGE
         USE

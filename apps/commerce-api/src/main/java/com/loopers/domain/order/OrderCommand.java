@@ -1,7 +1,7 @@
 package com.loopers.domain.order;
 
 import com.loopers.domain.order.vo.ReceiverInfo;
-import com.loopers.domain.product.ProductDomainInfo;
+import com.loopers.domain.product.ProductInfo;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -34,7 +34,7 @@ public class OrderCommand {
         Long productId,
         Integer quantity,
         ReceiverInfo receiverInfo,
-        ProductDomainInfo product
+        ProductInfo product
     ) {
         public CreateWithProduct {
             if (userId == null || userId.isBlank()) {
@@ -54,7 +54,7 @@ public class OrderCommand {
             }
         }
         
-        public static CreateWithProduct from(Create create, ProductDomainInfo product) {
+        public static CreateWithProduct from(Create create, ProductInfo product) {
             return new CreateWithProduct(
                 create.userId(),
                 create.productId(),
@@ -103,4 +103,16 @@ public class OrderCommand {
             }
         }
     }
+    
+    public record Cancel(
+        String userId,
+        Long orderId,
+        String reason
+    ) {}
+    
+    public record UpdateStatus(
+        Long orderId,
+        String newStatus,
+        String adminId
+    ) {}
 }

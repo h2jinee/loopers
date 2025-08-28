@@ -10,7 +10,7 @@ public record BrandCacheDto(
     String profileImageUrl,
     ZonedDateTime createdAt
 ) {
-    public static BrandCacheDto from(BrandEntity entity) {
+    public static BrandCacheDto from(Brand entity) {
         return new BrandCacheDto(
             entity.getId(),
             entity.getNameKo(),

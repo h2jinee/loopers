@@ -4,11 +4,9 @@ import java.util.Optional;
 
 public interface PointRepository {
     
-    PointEntity save(PointEntity point);
+    Point save(Point point);
     
-    Optional<PointEntity> findByUserId(String userId);
+    Optional<Point> findByUserId(String userId);
     
-    Optional<PointEntity> findByUserIdWithPessimisticLock(String userId);
-    
-    Optional<PointEntity> findByUserIdWithOptimisticLock(String userId);
+    Optional<Point> findByUserIdWithLock(String userId);
 }

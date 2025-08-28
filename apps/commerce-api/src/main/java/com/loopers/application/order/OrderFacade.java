@@ -1,400 +1,188 @@
 package com.loopers.application.order;
 
+import com.loopers.application.payment.PaymentProcessor;
+import com.loopers.domain.common.Money;
 import com.loopers.domain.order.*;
-import com.loopers.domain.payment.PaymentCommand;
-import com.loopers.domain.payment.PaymentService;
-import com.loopers.domain.product.ProductCommand;
-import com.loopers.domain.product.ProductService;
-import com.loopers.domain.product.ProductDomainInfo;
-import com.loopers.domain.product.ProductStockService;
-import com.loopers.domain.point.PointCommand;
-import com.loopers.domain.point.PointService;
-import com.loopers.domain.point.PointEntity;
+import com.loopers.domain.payment.PaymentResult;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderFacade {
     
-    private final OrderService orderService;
-    private final ProductService productService;
-    private final ProductStockService productStockService;
-    private final PaymentService paymentService;
-    private final PointService pointService;
+    private final OrderRepository orderRepository;
+    private final OrderProcessor orderProcessor;
+    private final PaymentProcessor paymentProcessor;
     
-    @Transactional
+    /**
+     * 주문 생성
+     */
     public OrderResult.CreateResult createOrder(OrderCriteria.Create criteria) {
-        OrderCommand.Create command = criteria.toCommand();
+        OrderCommand.Create orderCommand = criteria.toOrderCommand();
+        
+        // 1. 주문 생성
+        Order order = orderProcessor.processOrder(orderCommand);
+        
         try {
-            ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductDomainInfo product = productService.getProduct(getProductCommand);
+            // 2. 결제 처리
+            PaymentResult paymentResult = processPayment(criteria, order);
             
-            // 동시성 제어 (재고 감소 + 주문 생성)
-            productService.decreaseStock(new ProductCommand.DecreaseStock(
-                command.productId(), command.quantity()
-            ));
+            // 3. 주문 확정
+            orderProcessor.confirmOrder(order.getId());
             
-            OrderCommand.CreateWithProduct createWithProductCommand = 
-                OrderCommand.CreateWithProduct.from(command, product);
-            OrderService.OrderCreationResult creationResult = 
-                orderService.createOrderWithoutStockCheck(createWithProductCommand);
+            return buildResult(order);
             
-            OrderEntity order = creationResult.order();
-            
-            order = orderService.saveOrder(order);
-            Long orderId = order.getId();
-            
-            StockReservationEntity reservation = orderService.createStockReservation(
-                orderId, creationResult.productId(), creationResult.quantity()
-            );
-            orderService.saveStockReservation(reservation);
-            
-            try {
-                PointCommand.GetOne getPointCommand = new PointCommand.GetOne(command.userId());
-                PointEntity point = pointService.getPointEntity(getPointCommand);
-                
-                PaymentCommand.ProcessPayment paymentCommand = 
-                    new PaymentCommand.ProcessPayment(order, command.userId());
-                PaymentCommand.ProcessPaymentWithPoint paymentWithPointCommand = 
-                    PaymentCommand.ProcessPaymentWithPoint.from(paymentCommand, point);
-                paymentService.processPayment(paymentWithPointCommand);
-                
-                PointCommand.Use useCommand = new PointCommand.Use(
-                    command.userId(), order.getTotalAmount(), order.getId()
-                );
-                pointService.usePoint(useCommand);
-                
-                order.confirmPayment();
-                orderService.updateOrder(order);
-                
-                orderService.confirmStockReservations(orderId);
-                
-            } catch (CoreException e) {
-                order.failPayment();
-                orderService.updateOrder(order);
-                
-                orderService.cancelStockReservations(orderId);
-                
-                for (StockReservationEntity stockReservation : orderService.findStockReservationsByOrderId(orderId)) {
-                    if (stockReservation.getStatus() == StockReservationEntity.ReservationStatus.RESERVED) {
-                        ProductCommand.IncreaseStock increaseCommand = new ProductCommand.IncreaseStock(
-                            stockReservation.getProductId(), stockReservation.getQuantity()
-                        );
-                        productService.increaseStock(increaseCommand);
-                    }
-                }
-                
-                throw e;
-            }
-            
-            OrderInfo.CreateResult domainInfo = OrderInfo.CreateResult.from(order);
-            return OrderResult.CreateResult.from(domainInfo);
-            
-        } catch (CoreException e) {
-            throw e;
         } catch (Exception e) {
-            throw new CoreException(ErrorType.INTERNAL_ERROR, "주문 처리 중 오류가 발생했습니다.");
+            // 결제 실패 시 주문 취소
+            compensateOrder(order.getId(), e);
+            throw new CoreException(ErrorType.INTERNAL_ERROR, 
+                "주문 처리 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
     
     /**
-     * 비관적 락
+     * 결제 처리 조율 - 3가지 케이스 처리
      */
-	@Transactional(isolation = Isolation.READ_COMMITTED)
-    public OrderResult.CreateResult createOrderPessimistic(OrderCriteria.Create criteria) {
-        OrderCommand.Create command = criteria.toCommand();
-        log.info("주문 처리 시작 (비관적 락) - userId: {}, productId: {}, quantity: {}", 
-                command.userId(), command.productId(), command.quantity());
+    private PaymentResult processPayment(OrderCriteria.Create criteria, Order order) {
+        Money totalAmount = order.getTotalAmount();
+        Money pointToUse = criteria.pointToUse();
         
         try {
-            ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductDomainInfo product = productService.getProduct(getProductCommand);
-            
-            // 비관적 락으로 재고 차감
-            productStockService.decreaseStockPessimistic(command.productId(), command.quantity());
-            
-            OrderCommand.CreateWithProduct createWithProductCommand = 
-                OrderCommand.CreateWithProduct.from(command, product);
-            OrderService.OrderCreationResult creationResult = 
-                orderService.createOrderWithoutStockCheck(createWithProductCommand);
-            
-            OrderEntity order = creationResult.order();
-            order = orderService.saveOrder(order);
-            Long orderId = order.getId();
-            
-            StockReservationEntity reservation = orderService.createStockReservation(
-                orderId, creationResult.productId(), creationResult.quantity()
-            );
-            orderService.saveStockReservation(reservation);
-            
-            try {
-                // 포인트 조회
-                PointCommand.GetOne getPointCommand = new PointCommand.GetOne(command.userId());
-                PointEntity point = pointService.getPointEntity(getPointCommand);
-                
-                // 결제 처리
-                PaymentCommand.ProcessPayment paymentCommand = 
-                    new PaymentCommand.ProcessPayment(order, command.userId());
-                PaymentCommand.ProcessPaymentWithPoint paymentWithPointCommand = 
-                    PaymentCommand.ProcessPaymentWithPoint.from(paymentCommand, point);
-                paymentService.processPayment(paymentWithPointCommand);
-                
-                // 포인트 차감 (비관적 락)
-                PointCommand.Use useCommand = new PointCommand.Use(
-                    command.userId(), order.getTotalAmount(), order.getId()
+            // 케이스 1: 포인트 미사용 - PG 전액 결제
+            if (pointToUse == null || pointToUse.isZero()) {
+                return paymentProcessor.processPgPayment(
+                    criteria.toPgPaymentCommand(order, totalAmount)
                 );
-                pointService.usePointPessimistic(useCommand);
-                
-                order.confirmPayment();
-                orderService.updateOrder(order);
-                orderService.confirmStockReservations(orderId);
-                
-            } catch (CoreException e) {
-                order.failPayment();
-                orderService.updateOrder(order);
-                orderService.cancelStockReservations(orderId);
-                
-                List<StockReservationEntity> reservedStocks = orderService.findStockReservationsByOrderId(orderId)
-                    .stream()
-                    .filter(sr -> sr.getStatus() == StockReservationEntity.ReservationStatus.RESERVED)
-                    .toList();
-                
-                if (!reservedStocks.isEmpty()) {
-                    Map<Long, Integer> stockUpdates = reservedStocks.stream()
-                        .collect(Collectors.toMap(
-                            StockReservationEntity::getProductId,
-                            StockReservationEntity::getQuantity,
-                            Integer::sum
-                        ));
-                    productStockService.restoreStocks(stockUpdates);
-                }
-                
-                throw e;
             }
             
-            log.info("주문 처리 완료 - orderId: {}", orderId);
-            OrderInfo.CreateResult domainInfo = OrderInfo.CreateResult.from(order);
-            return OrderResult.CreateResult.from(domainInfo);
+            // 케이스 3: 포인트 전액 결제
+            if (pointToUse.equals(totalAmount)) {
+                return paymentProcessor.processPointPayment(
+                    criteria.toPointPaymentCommand(order)
+                );
+            }
             
-        } catch (CoreException e) {
-            log.error("주문 처리 실패 - userId: {}, productId: {}, error: {}", 
-                    command.userId(), command.productId(), e.getMessage());
-            throw e;
+            // 케이스 2: 복합 결제 (포인트 + PG)
+            return processCombinedPayment(criteria, order, pointToUse);
+            
         } catch (Exception e) {
-            log.error("주문 처리 중 예상치 못한 오류 발생", e);
-            throw new CoreException(ErrorType.INTERNAL_ERROR, "주문 처리 중 오류가 발생했습니다.");
+            // 결제 처리 실패 - 에러 로깅만 (보상은 상위에서 처리)
+            log.error("결제 처리 실패 - orderId: {}", order.getId(), e);
+            throw e;
         }
     }
     
     /**
-     * 주문 생성 (낙관적 락)
+     * 복합 결제 처리 (포인트 + PG)
+     * 포인트 결제 후 PG 결제, 실패 시 포인트 롤백
      */
-    @Retryable(
-        retryFor = ObjectOptimisticLockingFailureException.class,
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100)
-    )
-    @Transactional
-    public OrderResult.CreateResult createOrderOptimistic(OrderCriteria.Create criteria) {
-        OrderCommand.Create command = criteria.toCommand();
-        log.info("주문 처리 시작 (낙관적 락) - userId: {}, productId: {}, quantity: {}", 
-                command.userId(), command.productId(), command.quantity());
+    private PaymentResult processCombinedPayment(
+        OrderCriteria.Create criteria, 
+        Order order, 
+        Money pointToUse
+    ) {
+        Money remainingAmount = order.getTotalAmount().minus(pointToUse);
+        
+        // 1. 포인트 결제 (독립 트랜잭션)
+        PaymentResult pointResult = paymentProcessor.processPointPayment(
+            criteria.toPointPaymentCommand(order)
+        );
         
         try {
-            ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductDomainInfo product = productService.getProduct(getProductCommand);
-            
-            // 재고 차감 (낙관적 락)
-            productStockService.decreaseStockOptimistic(command.productId(), command.quantity());
-            
-            OrderCommand.CreateWithProduct createWithProductCommand = 
-                OrderCommand.CreateWithProduct.from(command, product);
-            OrderService.OrderCreationResult creationResult = 
-                orderService.createOrderWithoutStockCheck(createWithProductCommand);
-            
-            OrderEntity order = creationResult.order();
-            order = orderService.saveOrder(order);
-            Long orderId = order.getId();
-            
-            StockReservationEntity reservation = orderService.createStockReservation(
-                orderId, creationResult.productId(), creationResult.quantity()
+            // 2. PG 결제 (독립 트랜잭션)
+            PaymentResult pgResult = paymentProcessor.processPgPayment(
+                criteria.toPgPaymentCommand(order, remainingAmount)
             );
-            orderService.saveStockReservation(reservation);
             
-            try {
-                // 포인트 조회 먼저 하고
-                PointCommand.GetOne getPointCommand = new PointCommand.GetOne(command.userId());
-                PointEntity point = pointService.getPointEntity(getPointCommand);
-                
-                // 결제 처리
-                PaymentCommand.ProcessPayment paymentCommand = 
-                    new PaymentCommand.ProcessPayment(order, command.userId());
-                PaymentCommand.ProcessPaymentWithPoint paymentWithPointCommand = 
-                    PaymentCommand.ProcessPaymentWithPoint.from(paymentCommand, point);
-                paymentService.processPayment(paymentWithPointCommand);
-                
-                // 낙관적 락으로 포인트 차감
-                PointCommand.Use useCommand = new PointCommand.Use(
-                    command.userId(), order.getTotalAmount(), order.getId()
-                );
-                pointService.usePointOptimistic(useCommand);
-                
-                order.confirmPayment();
-                orderService.updateOrder(order);
-                orderService.confirmStockReservations(orderId);
-                
-            } catch (CoreException e) {
-                order.failPayment();
-                orderService.updateOrder(order);
-                orderService.cancelStockReservations(orderId);
-                
-                List<StockReservationEntity> reservedStocks = orderService.findStockReservationsByOrderId(orderId)
-                    .stream()
-                    .filter(sr -> sr.getStatus() == StockReservationEntity.ReservationStatus.RESERVED)
-                    .toList();
-                
-                if (!reservedStocks.isEmpty()) {
-                    Map<Long, Integer> stockUpdates = reservedStocks.stream()
-                        .collect(Collectors.toMap(
-                            StockReservationEntity::getProductId,
-                            StockReservationEntity::getQuantity,
-                            Integer::sum
-                        ));
-                    productStockService.restoreStocks(stockUpdates);
-                }
-                
-                throw e;
-            }
+            // 3. 복합 결제 결과 반환
+            return PaymentResult.combined(pointResult, pgResult);
             
-            log.info("주문 처리 완료 - orderId: {}", orderId);
-            OrderInfo.CreateResult domainInfo = OrderInfo.CreateResult.from(order);
-            return OrderResult.CreateResult.from(domainInfo);
-            
-        } catch (CoreException e) {
-            log.error("주문 처리 실패 - userId: {}, productId: {}, error: {}", 
-                    command.userId(), command.productId(), e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("주문 처리 중 예상치 못한 오류 발생", e);
-            throw new CoreException(ErrorType.INTERNAL_ERROR, "주문 처리 중 오류가 발생했습니다.");
+        } catch (Exception pgException) {
+            // PG 실패 시 포인트 롤백 (별도 트랜잭션)
+            log.error("PG 결제 실패, 포인트 롤백 시작 - orderId: {}", order.getId(), pgException);
+            rollbackPointPayment(order.getId(), criteria.userId(), pointToUse);
+            throw pgException;
         }
     }
     
     /**
-     * 락 없이 주문 생성 (테스트 용도)
-     * 동시성 문제를 확인하기 위한 메서드
+     * 포인트 결제 롤백
      */
-    @Transactional
-    public OrderResult.CreateResult createOrderNoLock(OrderCriteria.Create criteria) {
-        OrderCommand.Create command = criteria.toCommand();
-        log.info("주문 처리 시작 (락 없음) - userId: {}, productId: {}, quantity: {}", 
-                command.userId(), command.productId(), command.quantity());
+    private void rollbackPointPayment(Long orderId, String userId, Money amount) {
+        try {
+            paymentProcessor.cancelPointPayment(orderId, userId, amount);
+            log.info("포인트 롤백 성공 - orderId: {}", orderId);
+        } catch (Exception rollbackEx) {
+            log.error("포인트 롤백 실패 - orderId: {}, 수동 보상 필요", orderId, rollbackEx);
+            // TODO: 보상 배치 또는 알림
+        }
+    }
+    
+    /**
+     * 주문 보상 처리
+     */
+    private void compensateOrder(Long orderId, Exception e) {
+        log.error("주문 보상 처리 시작 - orderId: {}", orderId, e);
         
         try {
-            ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
-            ProductDomainInfo product = productService.getProduct(getProductCommand);
-            
-            // 락 없이 재고 차감
-            productStockService.decreaseStockNoLock(command.productId(), command.quantity());
-            
-            OrderCommand.CreateWithProduct createWithProductCommand = 
-                OrderCommand.CreateWithProduct.from(command, product);
-            OrderService.OrderCreationResult creationResult = 
-                orderService.createOrderWithoutStockCheck(createWithProductCommand);
-            
-            OrderEntity order = creationResult.order();
-            order = orderService.saveOrder(order);
-            Long orderId = order.getId();
-            
-            StockReservationEntity reservation = orderService.createStockReservation(
-                orderId, creationResult.productId(), creationResult.quantity()
-            );
-            orderService.saveStockReservation(reservation);
-            
-            try {
-                // 포인트 조회 먼저 하고
-                PointCommand.GetOne getPointCommand = new PointCommand.GetOne(command.userId());
-                PointEntity point = pointService.getPointEntity(getPointCommand);
-                
-                // 결제 처리
-                PaymentCommand.ProcessPayment paymentCommand = 
-                    new PaymentCommand.ProcessPayment(order, command.userId());
-                PaymentCommand.ProcessPaymentWithPoint paymentWithPointCommand = 
-                    PaymentCommand.ProcessPaymentWithPoint.from(paymentCommand, point);
-                paymentService.processPayment(paymentWithPointCommand);
-                
-                // 락 없이 포인트 차감
-                PointCommand.Use useCommand = new PointCommand.Use(
-                    command.userId(), order.getTotalAmount(), order.getId()
-                );
-                pointService.usePointNoLock(useCommand);
-                
-                order.confirmPayment();
-                orderService.updateOrder(order);
-                orderService.confirmStockReservations(orderId);
-                
-            } catch (CoreException e) {
-                order.failPayment();
-                orderService.updateOrder(order);
-                orderService.cancelStockReservations(orderId);
-                
-                List<StockReservationEntity> reservedStocks = orderService.findStockReservationsByOrderId(orderId)
-                    .stream()
-                    .filter(sr -> sr.getStatus() == StockReservationEntity.ReservationStatus.RESERVED)
-                    .toList();
-                
-                if (!reservedStocks.isEmpty()) {
-                    Map<Long, Integer> stockUpdates = reservedStocks.stream()
-                        .collect(Collectors.toMap(
-                            StockReservationEntity::getProductId,
-                            StockReservationEntity::getQuantity,
-                            Integer::sum
-                        ));
-                    productStockService.restoreStocks(stockUpdates);
-                }
-                
-                throw e;
-            }
-            
-            log.info("주문 처리 완료 - orderId: {}", orderId);
-            OrderInfo.CreateResult domainInfo = OrderInfo.CreateResult.from(order);
-            return OrderResult.CreateResult.from(domainInfo);
-            
-        } catch (CoreException e) {
-            log.error("주문 처리 실패 - userId: {}, productId: {}, error: {}", 
-                    command.userId(), command.productId(), e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("주문 처리 중 예상치 못한 오류 발생", e);
-            throw new CoreException(ErrorType.INTERNAL_ERROR, "주문 처리 중 오류가 발생했습니다.");
+            // 주문 취소 (독립 트랜잭션)
+            orderProcessor.cancelOrder(orderId);
+            log.info("주문 취소 성공 - orderId: {}", orderId);
+        } catch (Exception cancelEx) {
+            log.error("주문 취소 실패 - orderId: {}, 수동 보상 필요", orderId, cancelEx);
+            // TODO: 보상 배치 또는 알림
         }
+    }
+    
+    /**
+     * 결과 빌드
+     */
+    private OrderResult.CreateResult buildResult(Order order) {
+        // Order에서 첫 번째 주문 라인의 정보 추출
+        OrderLine firstOrderLine = order.getOrderLines().getFirst();
+        OrderInfo.CreateResult domainInfo = OrderInfo.CreateResult.from(
+            order, 
+            firstOrderLine.getProductId(), 
+            firstOrderLine.getQuantity()
+        );
+        OrderResult.CreateResult result = OrderResult.CreateResult.from(domainInfo);
+        
+        log.info("주문 생성 완료 - userId: {}, orderId: {}, totalAmount: {}",
+            order.getUserId(), order.getId(), order.getTotalAmount());
+        
+        return result;
     }
     
     public OrderResult.Detail getOrderDetail(OrderCriteria.GetDetail criteria) {
         OrderCommand.GetDetail command = criteria.toCommand();
-        OrderEntity order = orderService.getUserOrder(command);
+        
+        Order order = orderRepository.findByIdAndUserId(command.orderId(), command.userId())
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
+                "주문을 찾을 수 없습니다. orderId: " + command.orderId()));
+        
         OrderInfo.Detail domainInfo = OrderInfo.Detail.from(order);
         return OrderResult.Detail.from(domainInfo);
     }
     
     public Page<OrderResult.Summary> getUserOrders(OrderCriteria.GetList criteria) {
         OrderCommand.GetList command = criteria.toCommand();
-        Page<OrderEntity> orders = orderService.getUserOrders(command);
+        
+        Pageable pageable = PageRequest.of(
+            command.page(),
+            command.size(),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+        
+        Page<Order> orders = orderRepository.findByUserId(command.userId(), pageable);
         
         return orders.map(order -> {
             OrderInfo.Summary domainInfo = OrderInfo.Summary.from(order);

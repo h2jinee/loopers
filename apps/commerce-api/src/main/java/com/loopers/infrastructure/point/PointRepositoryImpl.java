@@ -1,6 +1,6 @@
 package com.loopers.infrastructure.point;
 
-import com.loopers.domain.point.PointEntity;
+import com.loopers.domain.point.Point;
 import com.loopers.domain.point.PointRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -14,22 +14,17 @@ public class PointRepositoryImpl implements PointRepository {
     private final PointJpaRepository pointJpaRepository;
     
     @Override
-    public PointEntity save(PointEntity point) {
+    public Point save(Point point) {
         return pointJpaRepository.save(point);
     }
     
     @Override
-    public Optional<PointEntity> findByUserId(String userId) {
+    public Optional<Point> findByUserId(String userId) {
         return pointJpaRepository.findByUserId(userId);
     }
     
     @Override
-    public Optional<PointEntity> findByUserIdWithPessimisticLock(String userId) {
-        return pointJpaRepository.findByIdWithPessimisticLock(userId);
-    }
-    
-    @Override
-    public Optional<PointEntity> findByUserIdWithOptimisticLock(String userId) {
-        return pointJpaRepository.findByIdWithOptimisticLock(userId);
+    public Optional<Point> findByUserIdWithLock(String userId) {
+        return pointJpaRepository.findByUserIdWithLock(userId);
     }
 }

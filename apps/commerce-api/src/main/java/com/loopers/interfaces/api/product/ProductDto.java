@@ -29,24 +29,36 @@ public class ProductDto {
             ) {}
             
             public record Response(
-                Long productId,
-                Long brandId,
-                String brandNameKo,
-                String productNameKo,
-                String description,
-                BigDecimal price,
-                Long likeCount,
+                ProductInfo product,
+                BrandInfo brand,
                 boolean isAvailable
             ) {
+                public record ProductInfo(
+                    Long productId,
+                    String nameKo,
+                    String description,
+                    BigDecimal price,
+                    Long likeCount
+                ) {}
+                
+                public record BrandInfo(
+                    Long brandId,
+                    String nameKo
+                ) {}
+                
                 public static Response from(ProductResult.Summary summary) {
                     return new Response(
-                        summary.productId(),
-                        summary.brandId(),
-                        summary.brandNameKo(),
-                        summary.productNameKo(),
-                        summary.description(),
-                        summary.price(),
-                        summary.likeCount(),
+                        new ProductInfo(
+                            summary.product().productId(),
+                            summary.product().nameKo(),
+                            summary.product().description(),
+                            summary.product().price(),
+                            summary.product().likeCount()
+                        ),
+                        new BrandInfo(
+                            summary.brand().brandId(),
+                            summary.brand().nameKo()
+                        ),
                         summary.isAvailable()
                     );
                 }
@@ -55,35 +67,55 @@ public class ProductDto {
         
         public static class GetDetail {
             public record Response(
-                Long productId,
-                Long brandId,
-                String brandNameKo,
-                String productNameKo,
-                String description,
-                BigDecimal price,
-                BigDecimal shippingFee,
-                BigDecimal totalPrice,
-                Integer stock,
-                ProductStatus status,
-                Integer releaseYear,
-                Long likeCount,
-                boolean isAvailable
+                ProductInfo product,
+                BrandInfo brand,
+                StockInfo stock
             ) {
+                public record ProductInfo(
+                    Long productId,
+                    String nameKo,
+                    String description,
+                    BigDecimal price,
+                    BigDecimal shippingFee,
+                    BigDecimal totalPrice,
+                    ProductStatus status,
+                    Integer releaseYear,
+                    Long likeCount,
+                    boolean isAvailable
+                ) {}
+                
+                public record BrandInfo(
+                    Long brandId,
+                    String nameKo
+                ) {}
+                
+                public record StockInfo(
+                    Integer quantity,
+                    boolean inStock
+                ) {}
+                
                 public static Response from(ProductResult.Detail detail) {
                     return new Response(
-                        detail.productId(),
-                        detail.brandId(),
-                        detail.brandNameKo(),
-                        detail.productNameKo(),
-                        detail.description(),
-                        detail.price(),
-                        detail.shippingFee(),
-                        detail.totalPrice(),
-                        detail.stock(),
-                        detail.status(),
-                        detail.releaseYear(),
-                        detail.likeCount(),
-                        detail.isAvailable()
+                        new ProductInfo(
+                            detail.product().productId(),
+                            detail.product().nameKo(),
+                            detail.product().description(),
+                            detail.product().price(),
+                            detail.product().shippingFee(),
+                            detail.product().totalPrice(),
+                            detail.product().status(),
+                            detail.product().releaseYear(),
+                            detail.product().likeCount(),
+                            detail.product().isAvailable()
+                        ),
+                        new BrandInfo(
+                            detail.brand().brandId(),
+                            detail.brand().nameKo()
+                        ),
+                        new StockInfo(
+                            detail.stock().quantity(),
+                            detail.stock().inStock()
+                        )
                     );
                 }
             }
