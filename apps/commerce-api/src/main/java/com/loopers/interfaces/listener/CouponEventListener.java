@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * 쿠폰 이벤트 리스너 (부가 로직)
- * 멘토님: 쿠폰 사용 실패해도 주문에 영향 없음, 실패해도 주문은 성공 유지
  */
 @Slf4j
 @Component
@@ -19,7 +18,6 @@ public class CouponEventListener {
     
     /**
      * 주문 완료 이벤트 처리 - 쿠폰 사용 (부가 로직)
-     * 멘토님: 쿠폰 사용 실패해도 주문에 영향 없음
      */
     @Async
     @EventListener
@@ -42,9 +40,6 @@ public class CouponEventListener {
             
         } catch (Exception e) {
             log.error("쿠폰 사용 실패 - orderId: {}, 주문은 유지됨 (부가 로직 실패)", event.orderId(), e);
-            
-            // 멘토님: 쿠폰 사용 실패해도 주문은 성공 유지
-            // 별도 보상이나 알림 처리만 수행
         }
     }
     

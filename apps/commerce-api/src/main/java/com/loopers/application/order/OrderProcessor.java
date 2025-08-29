@@ -24,7 +24,6 @@ public class OrderProcessor {
     
     /**
      * 주문 생성 - 메인 로직만 동기 처리 (실패시 주문 실패)
-     * 멘토님: 재고 부족/포인트 부족하면 주문 자체가 불가능 (메인 로직)
      */
     @Transactional
     public Order processOrder(OrderCommand.Create command, Money pointToUse) {

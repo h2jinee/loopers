@@ -22,8 +22,7 @@ public class OrderFacade {
     private final OrderApplicationEventPublisher orderEventPublisher;
     
     /**
-     * 주문 생성 - 멘토님 방식: 순수 주문 로직만, 나머지는 이벤트로 분리
-     * 주문은 재고, 쿠폰, 포인트, 결제에 관심 없음
+     * 주문 생성
      */
     @Transactional
     public OrderResult.CreateResult createOrder(OrderCriteria.Create criteria) {

@@ -1,7 +1,6 @@
 package com.loopers.application.order;
 
 import com.loopers.application.event.order.OrderLineSnapshot;
-import com.loopers.domain.common.Money;
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderLine;
 import com.loopers.domain.payment.PaymentMethod;
@@ -11,7 +10,6 @@ import java.util.List;
 
 /**
  * 주문 완료 이벤트
- * 멘토님 언급: orderId만 주지 말고 스냅샷 포함하여 다른 도메인이 독립적으로 판단 가능하게
  */
 public record OrderCompleted(
     Long orderId,
