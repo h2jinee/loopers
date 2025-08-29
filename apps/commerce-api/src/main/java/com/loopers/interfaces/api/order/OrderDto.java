@@ -5,7 +5,6 @@ import com.loopers.application.order.OrderResult;
 import com.loopers.domain.common.Money;
 import com.loopers.domain.order.vo.OrderStatus;
 import com.loopers.domain.order.vo.ReceiverInfo;
-import com.loopers.domain.payment.PgPaymentInfo;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -57,9 +56,8 @@ public class OrderDto {
                         Money pointMoney = Money.of(pointToUse);
                         
                         if (hasPgInfo) {
-                            PgPaymentInfo pgInfo = new PgPaymentInfo(cardType, cardNo);
                             return OrderCriteria.Create.withPoint(
-                                userId, productId, quantity, receiverInfo, pointMoney, pgInfo
+                                userId, productId, quantity, receiverInfo, pointMoney
                             );
                         } else {
                             return OrderCriteria.Create.pointOnly(
@@ -70,9 +68,8 @@ public class OrderDto {
                         if (!hasPgInfo) {
                             throw new IllegalArgumentException("결제 정보가 필요합니다.");
                         }
-                        PgPaymentInfo pgInfo = new PgPaymentInfo(cardType, cardNo);
                         return OrderCriteria.Create.withoutPoint(
-                            userId, productId, quantity, receiverInfo, pgInfo
+                            userId, productId, quantity, receiverInfo
                         );
                     }
                 }
@@ -181,42 +178,6 @@ public class OrderDto {
                         summary.firstItemName(),
                         summary.orderedAt()
                     );
-                }
-            }
-        }
-
-        public static class UpdateStatus {
-            public record Request(
-                @NotBlank(message = "주문 상태는 필수입니다.")
-                String status
-            ) {}
-        }
-        
-        public static class Statistics {
-            public record Response(
-                Long totalOrderCount,
-                Long totalOrderAmount,
-                ZonedDateTime lastOrderDate
-            ) {
-                public static Response from(OrderResult.Statistics statistics) {
-                    return new Response(
-                        statistics.totalOrderCount(),
-                        statistics.totalOrderAmount(),
-                        statistics.lastOrderDate()
-                    );
-                }
-            }
-        }
-        
-        public static class RecentOrders {
-            public record Response(
-                List<GetList.Response> orders
-            ) {
-                public static Response from(OrderResult.RecentOrders recentOrders) {
-                    var orderList = recentOrders.orders().stream()
-                        .map(GetList.Response::from)
-                        .toList();
-                    return new Response(orderList);
                 }
             }
         }

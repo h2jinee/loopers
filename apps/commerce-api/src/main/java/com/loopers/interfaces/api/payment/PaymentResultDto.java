@@ -17,10 +17,10 @@ public class PaymentResultDto {
         @NotNull(message = "결제 상태는 필수입니다")
         PaymentStatus status,
         
-        String reason  // 실패 사유 (실패시에만)
+        String reason  // 실패 사유
     ) {
         public PaymentResultCommand toCommand() {
-            return new PaymentResultCommand(
+            return PaymentResultCommand.basicResult(
                 transactionKey,
                 Long.parseLong(orderId),
                 status == PaymentStatus.COMPLETED,
