@@ -30,6 +30,7 @@ public class LikeFacade {
     private final ProductService productService;
     private final BrandService brandService;
     private final ProductCountService productCountService;
+    private final LikeApplicationEventPublisher likeEventPublisher;
 
     /**
      * 좋아요 추가
@@ -38,25 +39,28 @@ public class LikeFacade {
     public LikeResult.LikeToggleResult addLike(LikeCriteria.AddLike criteria) {
         log.debug("좋아요 추가 시작 - userId: {}, productId: {}", criteria.userId(), criteria.productId());
         
-        // 1. 좋아요 중복 체크 및 추가
+        // 1. 좋아요 추가 (메인 로직)
         LikeCommand.Toggle command = criteria.toCommand();
         boolean added = likeService.addLike(command);
         
         if (added) {
-            // 2. 카운트 증가 (비관적 락)
-            Long likeCount = productCountService.incrementLikeCountWithLock(criteria.productId());
+            // 2. 좋아요 추가 이벤트 발행
+            LikeAdded event = LikeAdded.from(criteria.userId(), criteria.productId());
+            likeEventPublisher.publish(event);
             
-            log.debug("좋아요 추가 완료 - 현재 카운트: {}", likeCount);
+            log.debug("좋아요 추가 완료 및 이벤트 발행 - userId: {}, productId: {}", 
+                criteria.userId(), criteria.productId());
             
-            // 3. 결과 반환
-            LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(true, likeCount);
+            // 3. 현재 카운트 조회
+            Long currentCount = productCountService.getLikeCount(criteria.productId());
+            LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(true, currentCount);
             return LikeResult.LikeToggleResult.from(domainInfo);
+            
         } else {
             log.debug("중복 좋아요 - userId: {}, productId: {}", criteria.userId(), criteria.productId());
             
-            // 현재 카운트 조회
+            // 현재 카운트 조회 (읽기만)
             Long likeCount = productCountService.getLikeCount(criteria.productId());
-            
             LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(true, likeCount);
             return LikeResult.LikeToggleResult.from(domainInfo);
         }
@@ -69,18 +73,23 @@ public class LikeFacade {
     public LikeResult.LikeToggleResult removeLike(LikeCriteria.RemoveLike criteria) {
         log.debug("좋아요 삭제 시작 - userId: {}, productId: {}", criteria.userId(), criteria.productId());
         
-        // 1. 좋아요 삭제
+        // 1. 좋아요 삭제 (메인 로직)
         LikeCommand.Toggle command = criteria.toCommand();
         boolean removed = likeService.removeLike(command);
         
         if (removed) {
-            // 2. 카운트 감소 (비관적 락)
-            Long likeCount = productCountService.decrementLikeCountWithLock(criteria.productId());
-            log.debug("좋아요 삭제 완료 - 현재 카운트: {}", likeCount);
+            // 2. 좋아요 삭제 이벤트 발행
+            LikeRemoved event = LikeRemoved.from(criteria.userId(), criteria.productId());
+            likeEventPublisher.publish(event);
             
-            // 3. 결과 반환
-            LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(false, likeCount);
+            log.debug("좋아요 삭제 완료 및 이벤트 발행 - userId: {}, productId: {}", 
+                criteria.userId(), criteria.productId());
+            
+            // 3. 현재 카운트 조회 (읽기만)
+            Long currentCount = productCountService.getLikeCount(criteria.productId());
+            LikeInfo.LikeResult domainInfo = new LikeInfo.LikeResult(false, currentCount);
             return LikeResult.LikeToggleResult.from(domainInfo);
+            
         } else {
             log.debug("삭제할 좋아요 없음 - userId: {}, productId: {}", criteria.userId(), criteria.productId());
             
