@@ -1,64 +1,62 @@
-server:
-  shutdown: graceful
-  tomcat:
-    threads:
-      max: 200 # 최대 워커 스레드 수 (default : 200)
-      min-spare: 10 # 최소 유지 스레드 수 (default : 10)
-    connection-timeout: 1m # 연결 타임아웃 (ms) (default : 60000ms = 1m)
-    max-connections: 8192 # 최대 동시 연결 수 (default : 8192)
-    accept-count: 100 # 대기 큐 크기 (default : 100)
-    keep-alive-timeout: 60s # 60s
-  max-http-request-header-size: 8KB
-  port: 18080
-
 spring:
-  main:
-    web-application-type: servlet
-  application:
-    name: commerce-streamer
-  profiles:
-    active: local
-  config:
-    import:
-      - jpa.yml
-      - redis.yml
-      - kafka.yml
-#      - logging.yml
-#      - monitoring.yml
+  kafka:
+    bootstrap-servers: ${BOOTSTRAP_SERVERS}
+    client-id: ${spring.application.name}
+    properties:
+      spring.json.add.type.headers: false # json serialize off
+      request.timeout.ms: 20000
+      retry.backoff.ms: 500
+      auto:
+        create.topics.enable: false
+        register.schemas: false
+        offset.reset: latest
+      use.latest.version: true
 
-demo-kafka:
-  test:
-    topic-name: demo.internal.topic-v1
+    # Producer 설정 (commerce-api)
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      retries: 3
+      acks: all  # At Least Once 보장
+      enable-idempotence: true  # 멱등성 보장
+      properties:
+        linger.ms: 10
+        batch.size: 16384
+        buffer.memory: 33554432
+        compression.type: snappy
+        delivery.timeout.ms: 120000
+        max.in.flight.requests.per.connection: 5
 
-kafka:
-  topics:
-    liked: internal.liked-events.v1
+    # Consumer 설정 (commerce-streamer)
+    consumer:
+      group-id: loopers-default-consumer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer  # 수정 (serializer → deserializer)
+      properties:
+        enable-auto-commit: false
+        spring.json.trusted.packages: "com.loopers.*"
+        max.poll.records: 100
+        max.poll.interval.ms: 300000
+        session.timeout.ms: 30000
 
+    listener:
+      ack-mode: manual
 
 ---
+spring.config.activate.on-profile: local, test
+
 spring:
-  config:
-    activate:
-      on-profile: local, test
+  kafka:
+    bootstrap-servers: localhost:19092
+    admin:
+      properties:
+        bootstrap.servers: kafka:9092
 
 ---
-spring:
-  config:
-    activate:
-      on-profile: dev
+spring.config.activate.on-profile: dev
 
 ---
-spring:
-  config:
-    activate:
-      on-profile: qa
+spring.config.activate.on-profile: qa
 
 ---
-spring:
-  config:
-    activate:
-      on-profile: prd
-
-springdoc:
-  api-docs:
-    enabled: false
+spring.config.activate.on-profile: prd
