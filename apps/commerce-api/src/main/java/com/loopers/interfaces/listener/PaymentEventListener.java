@@ -23,7 +23,6 @@ public class PaymentEventListener {
 
     private final OrderFacade orderFacade;
     private final StockService stockService;
-    private final PointService pointService;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional
@@ -47,14 +46,5 @@ public class PaymentEventListener {
 
         // 2. 재고 롤백
         stockService.rollbackStock(event.orderId());
-
-        // 3. 포인트 복원 (포인트 결제였다면)
-        if (event.requiresPointRollback()) {
-            pointService.refundPoint(
-                event.userId(),
-                Money.of(event.pointAmount()),
-                event.orderId()
-            );
-        }
     }
 }

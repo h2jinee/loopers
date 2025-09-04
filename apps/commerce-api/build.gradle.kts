@@ -31,6 +31,9 @@ dependencies {
     
     // configuration processor for IDE support
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
+    // Awaitility
+    testImplementation("org.awaitility:awaitility")
     
     // test-fixtures
     testImplementation(testFixtures(project(":modules:jpa")))

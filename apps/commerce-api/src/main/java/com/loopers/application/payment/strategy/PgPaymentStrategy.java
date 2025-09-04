@@ -14,26 +14,23 @@ import org.springframework.stereotype.Component;
 public class PgPaymentStrategy implements PaymentStrategy {
     
     private final PaymentService paymentService;
-    
+
     @Override
     public PaymentResult execute(PaymentCommand.Process command) {
         if (command.pgInfo() == null) {
-            throw new CoreException(
-                ErrorType.BAD_REQUEST,
-                "PG 결제 정보가 없습니다."
-            );
+            throw new CoreException(ErrorType.BAD_REQUEST, "PG 결제 정보가 없습니다.");
         }
-        
+
         try {
             CardInfo cardInfo = createCardInfo(command.pgInfo());
-            
+
             Payment payment = paymentService.processPgPayment(
                 command.orderId(),
                 command.userId(),
                 command.amount(),
                 cardInfo
             );
-            
+
             if (payment.isCompleted()) {
                 return PaymentResult.success(
                     payment.getPaymentMethod(),
@@ -41,14 +38,21 @@ public class PgPaymentStrategy implements PaymentStrategy {
                     payment.getTransactionId(),
                     command.userId()
                 );
-            } else {
+            } else if (payment.isPending()) {
+                return PaymentResult.pending(
+                    payment.getPaymentMethod(),
+                    payment.getAmount(),
+                    payment.getTransactionId(),
+                    command.userId()
+                );
+            } else {  // FAILED
                 return PaymentResult.failure(
                     payment.getPaymentMethod(),
                     payment.getFailureReason(),
                     command.userId()
                 );
             }
-            
+
         } catch (Exception e) {
             log.error("PG 결제 전략 실행 실패", e);
             return PaymentResult.failure(

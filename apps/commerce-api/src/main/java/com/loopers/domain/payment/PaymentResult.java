@@ -24,6 +24,18 @@ public record PaymentResult(
         );
     }
 
+    public static PaymentResult pending(PaymentMethod method, Money amount, String transactionId, String userId) {
+        return new PaymentResult(
+            method,
+            amount,
+            transactionId,
+            PaymentResultStatus.PENDING,
+            LocalDateTime.now(),
+            "결제 처리 중",
+            userId
+        );
+    }
+
     public static PaymentResult failure(PaymentMethod method, String message, String userId) {
         return new PaymentResult(
             method,
@@ -39,10 +51,15 @@ public record PaymentResult(
     public boolean isSuccess() {
         return status == PaymentResultStatus.SUCCESS;
     }
+
+    public boolean isPending() {
+        return status == PaymentResultStatus.PENDING;
+    }
 }
 
 enum PaymentResultStatus {
     SUCCESS,
+    PENDING,
     FAILED,
     PARTIAL,
     CANCELLED

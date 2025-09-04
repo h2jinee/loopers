@@ -25,13 +25,7 @@ public class PaymentProcessor {
      */
     @Transactional
     public PaymentResult processPointPayment(PaymentCommand.Point command) {
-        PaymentResult result = pointStrategy.execute(
-            PaymentCommand.Process.forPoint(command.orderId(), command.userId(), command.amount())
-        );
-
-        // 공통 후처리
-        afterPaymentProcess(command.orderId(), result);
-        return result;
+        return pointStrategy.execute(PaymentCommand.Process.forPoint(command.orderId(), command.userId(), command.amount()));
     }
 
     /**
@@ -39,20 +33,8 @@ public class PaymentProcessor {
      */
     @Transactional
     public PaymentResult processPgPayment(PaymentCommand.Pg command) {
-        PaymentResult result = pgStrategy.execute(
+        return pgStrategy.execute(
             PaymentCommand.Process.forPg(command.orderId(), command.userId(), command.amount(), command.pgInfo()));
-
-        // 공통 후처리
-        afterPaymentProcess(command.orderId(), result);
-        return result;
-    }
-
-    /**
-     * 공통 후처리
-     */
-    private void afterPaymentProcess(Long orderId, PaymentResult result) {
-        paymentService.savePaymentHistory(orderId, result);
-        log.info("결제 처리 완료 - orderId: {}, method: {}", orderId, result.method());
     }
 
     /**

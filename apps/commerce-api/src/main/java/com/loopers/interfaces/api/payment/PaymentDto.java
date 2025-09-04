@@ -5,7 +5,6 @@ import com.loopers.domain.common.Money;
 import com.loopers.domain.payment.PaymentMethod;
 import com.loopers.domain.payment.PaymentResult;
 import com.loopers.domain.payment.PaymentStatus;
-import com.loopers.domain.payment.PgPaymentInfo;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
