@@ -63,9 +63,10 @@ public class PaymentService {
     /**
      * 결제 내역 저장
      */
-    public void savePaymentHistory(Long orderId, PaymentResult result) {
+    public Payment savePaymentHistory(Long orderId, PaymentResult result) {
         Payment payment = convertToPayment(orderId, result);
         paymentRepository.save(payment);
+        return payment;
     }
     
     private Payment convertToPayment(Long orderId, PaymentResult result) {
@@ -91,13 +92,14 @@ public class PaymentService {
     /**
      * 결제 완료 처리 (콜백용)
      */
-    public void completePayment(String transactionId) {
+    public Payment completePayment(String transactionId) {
         Payment payment = paymentRepository.findByTransactionId(transactionId)
             .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다: " + transactionId));
         
         payment.complete();
         paymentRepository.save(payment);
         log.info("결제 완료 처리: transactionId={}", transactionId);
+        return payment;
     }
     
     /**

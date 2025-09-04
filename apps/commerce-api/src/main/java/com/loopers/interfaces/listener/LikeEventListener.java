@@ -5,18 +5,19 @@ import com.loopers.application.like.LikeRemoved;
 import com.loopers.domain.product.ProductCountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * 상품 집계 이벤트 리스너
+ * 좋아요 이벤트 리스너
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProductCountEventListener {
+public class LikeEventListener {
     
     private final ProductCountService productCountService;
     
@@ -24,7 +25,7 @@ public class ProductCountEventListener {
      * 좋아요 추가 이벤트 처리
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional
     public void handleLikeAdded(LikeAdded event) {
         log.info("좋아요 추가 이벤트 수신 - 집계 증가 시작 - userId: {}, productId: {}", 
@@ -50,7 +51,7 @@ public class ProductCountEventListener {
      * 좋아요 삭제 이벤트 처리
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional
     public void handleLikeRemoved(LikeRemoved event) {
         log.info("좋아요 삭제 이벤트 수신 - 집계 감소 시작 - userId: {}, productId: {}", 

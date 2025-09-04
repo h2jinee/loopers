@@ -135,10 +135,11 @@ public class StockService {
     }
     
     /**
-     * 재고 예약 취소 및 재고 복원
+     * 재고 롤백 (예약 취소 + 재고 복원)
+     * 메서드명 개선: cancelReservationsAndRestoreStock → rollbackStock
      */
     @Transactional
-    public void cancelReservationsAndRestoreStock(Long orderId) {
+    public void rollbackStock(Long orderId) {
         List<StockReservation> reservations = stockReservationRepository.findByOrderId(orderId);
         
         cancelReservations(reservations);
@@ -154,6 +155,16 @@ public class StockService {
             }
         }
         
-        log.info("재고 예약 취소 및 복원 완료 - orderId: {}", orderId);
+        log.info("재고 롤백 완료 - orderId: {}", orderId);
+    }
+    
+    /**
+     * 재고 예약 취소 및 재고 복원
+     * @deprecated rollbackStock() 사용 권장
+     */
+    @Deprecated
+    @Transactional
+    public void cancelReservationsAndRestoreStock(Long orderId) {
+        rollbackStock(orderId);
     }
 }
