@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 /**
  * 메트릭 집계 Consumer
@@ -35,58 +36,80 @@ public class MetricsConsumer {
     private final EventHandledRepository eventHandledRepository;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(
-        topics = {KafkaTopics.CATALOG_EVENTS, KafkaTopics.ORDER_EVENTS},
-        groupId = "metrics-group",
-        containerFactory = "kafkaListenerContainerFactory"
-    )
-    @Transactional
-    public void consume(
-        String messageJson,
-        Acknowledgment ack
-    ) throws JsonProcessingException {
+	@KafkaListener(
+		topics = {KafkaTopics.CATALOG_EVENTS, KafkaTopics.ORDER_EVENTS},
+		groupId = "metrics-group",
+		containerFactory = "kafkaListenerContainerFactory"
+	)
+	@Transactional
+	public void consume(
+		String messageJson,
+		Acknowledgment ack
+	) throws JsonProcessingException {
 
-        // JSON 파싱
-        KafkaEventMessage<?> message = objectMapper.readValue(
-            messageJson,
-            objectMapper.getTypeFactory().constructParametricType(
-                KafkaEventMessage.class,
-                Object.class
-            )
-        );
+		// JSON 파싱
+		KafkaEventMessage<?> message = objectMapper.readValue(
+			messageJson,
+			objectMapper.getTypeFactory().constructParametricType(
+				KafkaEventMessage.class,
+				Object.class
+			)
+		);
 
-        String eventId = message.getEventId();
+		String eventId = message.getEventId();
 
-        try {
-            // 1. 멱등성 체크
-            if (eventHandledRepository.existsByEventIdAndConsumerName(eventId, CONSUMER_NAME)) {
-                log.debug("이미 처리된 이벤트 스킵 - eventId: {}", eventId);
-                ack.acknowledge();
-                return;
-            }
+		try {
+			// 1. 멱등성 체크
+			if (eventHandledRepository.existsByEventIdAndConsumerName(eventId, CONSUMER_NAME)) {
+				log.debug("이미 처리된 이벤트 스킵 - eventId: {}", eventId);
+				ack.acknowledge();
+				return;
+			}
 
-            // 2. 이벤트 타입별 처리
-            switch (message.getEventType()) {
-                case EventTypes.LIKE_ADDED -> handleLikeAdded(message);
-                case EventTypes.LIKE_REMOVED -> handleLikeRemoved(message);
-                case EventTypes.ORDER_CREATED -> handleOrderCreated(message);
-                default -> log.debug("메트릭 처리 대상 아님 - type: {}", message.getEventType());
-            }
+			// 2. Version 체크 (순서가 뒤바뀐 이벤트 처리)
+			Long eventVersion = message.getVersion() != null
+				? message.getVersion().longValue()
+				: System.currentTimeMillis() / 1000;
 
-            // 3. 처리 완료 기록
-            eventHandledRepository.save(
-                EventHandled.create(eventId, CONSUMER_NAME, message.getEventType())
-            );
+			Optional<EventHandled> latestProcessed = eventHandledRepository
+				.findLatestVersion(message.getAggregateId(), CONSUMER_NAME);
 
-            // 4. ACK
-            ack.acknowledge();
-            log.debug("메트릭 업데이트 완료 - eventId: {}", eventId);
+			if (latestProcessed.isPresent() &&
+				latestProcessed.get().getEventVersion() >= eventVersion) {
+				log.warn("구 버전 이벤트 스킵 (Metrics) - eventId: {}, version: {}, latestVersion: {}",
+					eventId, eventVersion, latestProcessed.get().getEventVersion());
+				ack.acknowledge();
+				return;
+			}
 
-        } catch (Exception e) {
-            log.error("메트릭 처리 실패 - eventId: {}", eventId, e);
-            // ACK 안함 -> 재시도
-        }
-    }
+			// 3. 이벤트 타입별 처리
+			switch (message.getEventType()) {
+				case EventTypes.LIKE_ADDED -> handleLikeAdded(message);
+				case EventTypes.LIKE_REMOVED -> handleLikeRemoved(message);
+				case EventTypes.ORDER_CREATED -> handleOrderCreated(message);
+				default -> log.debug("메트릭 처리 대상 아님 - type: {}", message.getEventType());
+			}
+
+			// 4. 처리 완료 기록 (aggregateId와 version 포함)
+			eventHandledRepository.save(
+				EventHandled.create(
+					eventId,
+					CONSUMER_NAME,
+					message.getEventType(),
+					message.getAggregateId(),
+					eventVersion
+				)
+			);
+
+			// 5. ACK
+			ack.acknowledge();
+			log.debug("메트릭 업데이트 완료 - eventId: {}", eventId);
+
+		} catch (Exception e) {
+			log.error("메트릭 처리 실패 - eventId: {}", eventId, e);
+			// ACK 안함 -> 재시도
+		}
+	}
 
     /**
      * 좋아요 추가 처리

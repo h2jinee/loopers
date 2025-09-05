@@ -1,5 +1,6 @@
 package com.loopers.application.order;
 
+import com.loopers.application.event.EventPublisher;
 import com.loopers.application.event.order.OrderEvent;
 import com.loopers.domain.order.*;
 import com.loopers.support.error.CoreException;
@@ -20,7 +21,7 @@ public class OrderFacade {
     
     private final OrderRepository orderRepository;
     private final OrderProcessor orderProcessor;
-    private final OrderApplicationEventPublisher orderEventPublisher;
+	private final EventPublisher eventPublisher;
     
     /**
      * 주문 생성
@@ -35,8 +36,8 @@ public class OrderFacade {
         Order order = orderProcessor.processOrder(orderCommand, criteria.pointToUse());
         
         // 2. 주문 생성 이벤트 발행
-        OrderEvent.Created event = OrderEvent.Created.from(order);
-        orderEventPublisher.publish(event);
+		OrderEvent.Created event = OrderEvent.Created.from(order);
+		eventPublisher.publish(event);
         
         log.info("주문 생성 완료 및 이벤트 발행 - orderId: {}, totalAmount: {}",
             order.getId(), order.getTotalAmount());
@@ -59,8 +60,8 @@ public class OrderFacade {
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
                 "주문을 찾을 수 없습니다. orderId: " + orderId));
 
-        OrderEvent.Confirmed event = OrderEvent.Confirmed.from(orderId, order.getUserId());
-        orderEventPublisher.publish(event);
+		OrderEvent.Confirmed event = OrderEvent.Confirmed.from(orderId, order.getUserId());
+		eventPublisher.publish(event);
     }
     
     /**
@@ -77,8 +78,8 @@ public class OrderFacade {
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
                 "주문을 찾을 수 없습니다. orderId: " + orderId));
 
-        OrderEvent.Cancelled event = OrderEvent.Cancelled.from(orderId, order.getUserId(), reason);
-        orderEventPublisher.publish(event);
+		OrderEvent.Cancelled event = OrderEvent.Cancelled.from(orderId, order.getUserId(), reason);
+		eventPublisher.publish(event);
     }
     
     /**

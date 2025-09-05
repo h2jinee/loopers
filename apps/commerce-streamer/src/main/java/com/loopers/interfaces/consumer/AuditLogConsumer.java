@@ -1,5 +1,7 @@
 package com.loopers.interfaces.consumer;
 
+import java.util.Optional;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.event.EventHandled;
@@ -61,7 +63,23 @@ public class AuditLogConsumer {
                 return;
             }
 
-            // 2. EventLog 저장
+			// 2. Version 체크 (순서가 뒤바뀐 이벤트 처리)
+			Long eventVersion = message.getVersion() != null
+				? message.getVersion().longValue()
+				: System.currentTimeMillis() / 1000;
+
+			Optional<EventHandled> latestProcessed = eventHandledRepository
+				.findLatestVersion(message.getAggregateId(), CONSUMER_NAME);
+
+			if (latestProcessed.isPresent() &&
+				latestProcessed.get().getEventVersion() >= eventVersion) {
+				log.warn("구 버전 이벤트 스킵 - eventId: {}, version: {}, latestVersion: {}",
+					eventId, eventVersion, latestProcessed.get().getEventVersion());
+				ack.acknowledge();
+				return;
+			}
+
+            // 3. EventLog 저장
             EventLog eventLog = EventLog.create(
                 eventId,
                 message.getEventType(),
@@ -77,16 +95,18 @@ public class AuditLogConsumer {
             log.info("이벤트 로그 저장 완료 - eventId: {}, type: {}",
                 eventId, message.getEventType());
 
-            // 3. 처리 완료 기록
-            EventHandled eventHandled = EventHandled.create(
-                eventId,
-                CONSUMER_NAME,
-                message.getEventType()
-            );
+			// 4. 처리 완료 기록 (aggregateId와 version 포함)
+			EventHandled eventHandled = EventHandled.create(
+				eventId,
+				CONSUMER_NAME,
+				message.getEventType(),
+				message.getAggregateId(),
+				eventVersion  // 추가
+			);
 
             eventHandledRepository.save(eventHandled);
 
-            // 4. ACK
+            // 5. ACK
             ack.acknowledge();
             log.debug("이벤트 처리 완료 및 ACK - eventId: {}", eventId);
 

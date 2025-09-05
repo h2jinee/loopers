@@ -1,5 +1,6 @@
 package com.loopers.application.event.order;
 
+import com.loopers.application.event.Event;
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderLine;
 import java.math.BigDecimal;
@@ -21,7 +22,7 @@ public class OrderEvent {
         BigDecimal totalAmount,
         List<OrderItemSnapshot> orderItems,  // 재고 복원용 스냅샷
         LocalDateTime createdAt
-    ) {
+    ) implements Event {
         /**
          * Order 엔티티로부터 이벤트 생성
          */
@@ -36,7 +37,17 @@ public class OrderEvent {
                 LocalDateTime.now()
             );
         }
-    }
+
+		@Override
+		public LocalDateTime getOccurredAt() {
+			return createdAt;
+		}
+
+		@Override
+		public String getAggregateId() {
+			return String.valueOf(orderId);
+		}
+	}
 
     /**
      * 주문 항목 스냅샷 (재고 복원에 필요한 최소 정보)
@@ -60,11 +71,21 @@ public class OrderEvent {
         Long orderId,
         String userId,
         LocalDateTime confirmedAt
-    ) {
+    ) implements Event {
         public static Confirmed from(Long orderId, String userId) {
             return new Confirmed(orderId, userId, LocalDateTime.now());
         }
-    }
+
+		@Override
+		public LocalDateTime getOccurredAt() {
+			return confirmedAt;
+		}
+
+		@Override
+		public String getAggregateId() {
+			return String.valueOf(orderId);
+		}
+	}
 
     /**
      * 주문 취소 이벤트
@@ -74,7 +95,7 @@ public class OrderEvent {
         String userId,
         String reason,  // "PAYMENT_FAILED", "CUSTOMER_REQUEST" 등
         LocalDateTime cancelledAt
-    ) {
+    ) implements Event {
         public static Cancelled from(Long orderId, String userId, String reason) {
             return new Cancelled(orderId, userId, reason, LocalDateTime.now());
         }
@@ -83,5 +104,15 @@ public class OrderEvent {
         public static Cancelled fromPaymentFailure(Long orderId, String userId) {
             return from(orderId, userId, "PAYMENT_FAILED");
         }
-    }
+
+		@Override
+		public LocalDateTime getOccurredAt() {
+			return cancelledAt;
+		}
+
+		@Override
+		public String getAggregateId() {
+			return String.valueOf(orderId);
+		}
+	}
 }

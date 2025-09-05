@@ -1,5 +1,7 @@
 package com.loopers.application.like;
 
+import com.loopers.application.event.EventPublisher;
+import com.loopers.application.event.like.LikeEvent;
 import com.loopers.domain.like.Like;
 import com.loopers.domain.like.LikeCommand;
 import com.loopers.domain.like.LikeInfo;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,7 +33,7 @@ public class LikeFacade {
     private final ProductService productService;
     private final BrandService brandService;
     private final ProductCountService productCountService;
-    private final LikeApplicationEventPublisher likeEventPublisher;
+	private final EventPublisher eventPublisher;
 
     /**
      * 좋아요 추가
@@ -45,8 +48,8 @@ public class LikeFacade {
         
         if (added) {
             // 2. 좋아요 추가 이벤트 발행
-            LikeAdded event = LikeAdded.from(criteria.userId(), criteria.productId());
-            likeEventPublisher.publish(event);
+			LikeEvent.Added event = LikeEvent.Added.from(criteria.userId(), criteria.productId());
+			eventPublisher.publish(event);
             
             log.debug("좋아요 추가 완료 및 이벤트 발행 - userId: {}, productId: {}", 
                 criteria.userId(), criteria.productId());
@@ -79,8 +82,8 @@ public class LikeFacade {
         
         if (removed) {
             // 2. 좋아요 삭제 이벤트 발행
-            LikeRemoved event = LikeRemoved.from(criteria.userId(), criteria.productId());
-            likeEventPublisher.publish(event);
+			LikeEvent.Removed event = LikeEvent.Removed.from(criteria.userId(), criteria.productId());
+			eventPublisher.publish(event);
             
             log.debug("좋아요 삭제 완료 및 이벤트 발행 - userId: {}, productId: {}", 
                 criteria.userId(), criteria.productId());
@@ -162,7 +165,7 @@ public class LikeFacade {
                 
                 return LikeResult.LikedProduct.from(likeInfo);
             })
-            .filter(item -> item != null)
+            .filter(Objects::nonNull)
             .collect(Collectors.toList());
         
         return new PageImpl<>(likedProducts, pageRequest, likes.getTotalElements());

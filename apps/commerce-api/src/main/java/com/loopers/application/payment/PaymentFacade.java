@@ -1,8 +1,8 @@
 package com.loopers.application.payment;
 
+import com.loopers.application.event.EventPublisher;
 import com.loopers.application.event.payment.PaymentEvent;
-import com.loopers.application.stock.StockApplicationEventPublisher;
-import com.loopers.application.stock.StockChanged;
+import com.loopers.application.event.stock.StockEvent;
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderLine;
 import com.loopers.domain.order.OrderService;
@@ -46,8 +46,7 @@ public class PaymentFacade {
     private final PaymentGatewayPort paymentGatewayPort;
     private final RedisTemplate<String, String> redisTemplate;
 
-    private final PaymentApplicationEventPublisher paymentEventPublisher;
-    private final StockApplicationEventPublisher stockEventPublisher;
+	private final EventPublisher eventPublisher;
 
     private static final String RESULT_KEY_PREFIX = "payment:result:";
     private static final long RESULT_TTL_MINUTES = 10;
@@ -98,13 +97,13 @@ public class PaymentFacade {
             stockService.createReservation(order.getId(), line.getProductId(), line.getQuantity());
 
             // 재고 이벤트 발행
-            StockChanged event = StockChanged.from(
-                changeInfo.productId(),
-                changeInfo.previousQuantity(),
-                changeInfo.currentQuantity(),
-                "ORDER_PAYMENT"
-            );
-            stockEventPublisher.publish(event);
+			StockEvent.Changed event = StockEvent.Changed.from(
+				changeInfo.productId(),
+				changeInfo.previousQuantity(),
+				changeInfo.currentQuantity(),
+				"ORDER_PAYMENT"
+			);
+			eventPublisher.publish(event);
         }
 
         log.debug("재고 처리 완료 - orderId: {}", order.getId());
@@ -117,11 +116,11 @@ public class PaymentFacade {
         PaymentResult result = paymentProcessor.processPointPayment(
             new PaymentCommand.Point(request.orderId(), userId, request.toMoney()));
 
-        if (result.isSuccess()) {
-            paymentEventPublisher.publish(PaymentEvent.Completed.of(request.orderId()));
-        } else {
-            paymentEventPublisher.publish(PaymentEvent.Failed.of(request.orderId(), "POINT_PAYMENT_FAILED"));
-        }
+		if (result.isSuccess()) {
+			eventPublisher.publish(PaymentEvent.Completed.of(request.orderId()));
+		} else {
+			eventPublisher.publish(PaymentEvent.Failed.of(request.orderId(), "POINT_PAYMENT_FAILED"));
+		}
 
         return result;
     }

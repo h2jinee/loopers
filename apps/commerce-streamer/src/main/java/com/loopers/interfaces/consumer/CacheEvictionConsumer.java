@@ -15,6 +15,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
@@ -32,77 +33,99 @@ public class CacheEvictionConsumer {
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(
-        topics = {KafkaTopics.CATALOG_EVENTS},
-        groupId = "cache-eviction-group",
-        containerFactory = "kafkaListenerContainerFactory"
-    )
-    public void consume(
-        String messageJson,
-        Acknowledgment ack
-    ) throws JsonProcessingException {
-        // JSON 파싱
-        KafkaEventMessage<?> message = objectMapper.readValue(
-            messageJson,
-            objectMapper.getTypeFactory().constructParametricType(
-                KafkaEventMessage.class,
-                Object.class
-            )
-        );
+	@KafkaListener(
+		topics = {KafkaTopics.CATALOG_EVENTS},
+		groupId = "cache-eviction-group",
+		containerFactory = "kafkaListenerContainerFactory"
+	)
+	public void consume(
+		String messageJson,
+		Acknowledgment ack
+	) throws JsonProcessingException {
+		// JSON 파싱
+		KafkaEventMessage<?> message = objectMapper.readValue(
+			messageJson,
+			objectMapper.getTypeFactory().constructParametricType(
+				KafkaEventMessage.class,
+				Object.class
+			)
+		);
 
-        String eventId = message.getEventId();
+		String eventId = message.getEventId();
 
-        try {
-            // 1. 멱등성 체크
-            if (eventHandledRepository.existsByEventIdAndConsumerName(eventId, CONSUMER_NAME)) {
-                log.debug("이미 처리된 이벤트 스킵 - eventId: {}", eventId);
-                ack.acknowledge();
-                return;
-            }
+		try {
+			// 1. 멱등성 체크
+			if (eventHandledRepository.existsByEventIdAndConsumerName(eventId, CONSUMER_NAME)) {
+				log.debug("이미 처리된 이벤트 스킵 - eventId: {}", eventId);
+				ack.acknowledge();
+				return;
+			}
 
-            // 2. 캐시 무효화가 필요한 이벤트만 처리
-            boolean cacheEvicted = false;
+			// 2. Version 체크 (순서가 뒤바뀐 이벤트 처리)
+			Long eventVersion = message.getVersion() != null
+				? message.getVersion().longValue()
+				: System.currentTimeMillis() / 1000;
 
-            switch (message.getEventType()) {
-                case EventTypes.LIKE_ADDED,
-                     EventTypes.LIKE_REMOVED -> {
-                    evictProductCache(message);
-                    cacheEvicted = true;
-                }
-                case EventTypes.STOCK_CHANGED -> {
-                    // 재고 변경
-                    CatalogEventPayload.StockChanged stockEvent =
-                        objectMapper.convertValue(message.getPayload(), CatalogEventPayload.StockChanged.class);
+			Optional<EventHandled> latestProcessed = eventHandledRepository
+				.findLatestVersion(message.getAggregateId(), CONSUMER_NAME);
 
-                    // 재고가 0이 되었을 때만 캐시 삭제
-                    if (stockEvent.getCurrentQuantity() == 0) {
-                        evictProductCache(message);
-                        cacheEvicted = true;
-                        log.info("재고 소진 - productId: {} 캐시 삭제", stockEvent.getProductId());
-                    } else {
-                        log.debug("재고 변경되었지만 소진 아님 - productId: {}, 현재재고: {}",
-                            stockEvent.getProductId(), stockEvent.getCurrentQuantity());
-                    }
-                }
-                default -> log.debug("캐시 무효화 대상 아님 - type: {}", message.getEventType());
-            }
+			if (latestProcessed.isPresent() &&
+				latestProcessed.get().getEventVersion() >= eventVersion) {
+				log.warn("구 버전 이벤트 스킵 (Cache) - eventId: {}, version: {}, latestVersion: {}",
+					eventId, eventVersion, latestProcessed.get().getEventVersion());
+				ack.acknowledge();
+				return;
+			}
 
-            // 3. 캐시 삭제한 경우에만 처리 기록
-            if (cacheEvicted) {
-                eventHandledRepository.save(
-                    EventHandled.create(eventId, CONSUMER_NAME, message.getEventType())
-                );
-                log.info("캐시 무효화 완료 - eventId: {}, type: {}",
-                    eventId, message.getEventType());
-            }
+			// 3. 캐시 무효화가 필요한 이벤트만 처리
+			boolean cacheEvicted = false;
 
-            // 4. ACK
-            ack.acknowledge();
+			switch (message.getEventType()) {
+				case EventTypes.LIKE_ADDED,
+					 EventTypes.LIKE_REMOVED -> {
+					evictProductCache(message);
+					cacheEvicted = true;
+				}
+				case EventTypes.STOCK_CHANGED -> {
+					// 재고 변경
+					CatalogEventPayload.StockChanged stockEvent =
+						objectMapper.convertValue(message.getPayload(), CatalogEventPayload.StockChanged.class);
 
-        } catch (Exception e) {
-            log.error("캐시 무효화 실패 - eventId: {}", eventId, e);
-        }
-    }
+					// 재고가 0이 되었을 때만 캐시 삭제
+					if (stockEvent.getCurrentQuantity() == 0) {
+						evictProductCache(message);
+						cacheEvicted = true;
+						log.info("재고 소진 - productId: {} 캐시 삭제", stockEvent.getProductId());
+					} else {
+						log.debug("재고 변경되었지만 소진 아님 - productId: {}, 현재재고: {}",
+							stockEvent.getProductId(), stockEvent.getCurrentQuantity());
+					}
+				}
+				default -> log.debug("캐시 무효화 대상 아님 - type: {}", message.getEventType());
+			}
+
+			// 4. 캐시 삭제한 경우에만 처리 기록
+			if (cacheEvicted) {
+				eventHandledRepository.save(
+					EventHandled.create(
+						eventId,
+						CONSUMER_NAME,
+						message.getEventType(),
+						message.getAggregateId(),
+						eventVersion
+					)
+				);
+				log.info("캐시 무효화 완료 - eventId: {}, type: {}",
+					eventId, message.getEventType());
+			}
+
+			// 5. ACK
+			ack.acknowledge();
+
+		} catch (Exception e) {
+			log.error("캐시 무효화 실패 - eventId: {}", eventId, e);
+		}
+	}
 
     /**
      * 상품 관련 캐시 삭제

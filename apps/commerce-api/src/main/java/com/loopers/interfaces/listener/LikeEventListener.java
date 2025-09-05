@@ -1,7 +1,5 @@
 package com.loopers.interfaces.listener;
 
-import com.loopers.application.like.LikeAdded;
-import com.loopers.application.like.LikeRemoved;
 import com.loopers.domain.product.ProductCountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

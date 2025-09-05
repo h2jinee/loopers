@@ -35,11 +35,17 @@ public class EventHandled {
     @Column(name = "event_id", nullable = false)
     private String eventId;
 
+	@Column(name = "aggregate_id", nullable = false)
+	private String aggregateId;
+
     @Column(name = "consumer_name", nullable = false)
     private String consumerName;  // AUDIT_LOG, METRICS, CACHE_EVICT
 
     @Column(name = "event_type", nullable = false)
     private String eventType;
+
+	@Column(name = "event_version")
+	private Long eventVersion;  // 이벤트 버전 (순서 체크용)
 
     @Column(name = "processed_at", nullable = false)
     private LocalDateTime processedAt;
@@ -51,12 +57,16 @@ public class EventHandled {
     public static EventHandled create(
         String eventId,
         String consumerName,
-        String eventType
+        String eventType,
+		String aggregateId,
+		Long eventVersion
     ) {
         return EventHandled.builder()
             .eventId(eventId)
             .consumerName(consumerName)
             .eventType(eventType)
+			.aggregateId(aggregateId)
+			.eventVersion(eventVersion)
             .processedAt(LocalDateTime.now())
             .build();
     }
