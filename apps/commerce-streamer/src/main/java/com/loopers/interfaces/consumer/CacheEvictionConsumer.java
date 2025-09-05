@@ -1,5 +1,7 @@
 package com.loopers.interfaces.consumer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.event.EventHandled;
 import com.loopers.domain.event.EventHandledRepository;
 import com.loopers.kafka.EventTypes;
@@ -11,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -29,6 +30,7 @@ public class CacheEvictionConsumer {
 
     private final EventHandledRepository eventHandledRepository;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(
         topics = {KafkaTopics.CATALOG_EVENTS},
@@ -36,9 +38,18 @@ public class CacheEvictionConsumer {
         containerFactory = "kafkaListenerContainerFactory"
     )
     public void consume(
-        @Payload KafkaEventMessage<?> message,
+        String messageJson,
         Acknowledgment ack
-    ) {
+    ) throws JsonProcessingException {
+        // JSON 파싱
+        KafkaEventMessage<?> message = objectMapper.readValue(
+            messageJson,
+            objectMapper.getTypeFactory().constructParametricType(
+                KafkaEventMessage.class,
+                Object.class
+            )
+        );
+
         String eventId = message.getEventId();
 
         try {

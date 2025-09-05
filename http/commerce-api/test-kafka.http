@@ -1,0 +1,16 @@
+### 변수 설정
+@host = http://localhost:8080
+
+### 1. 좋아요 추가 (이벤트 발행)
+POST {{host}}/api/v1/like/products/1
+X-USER-ID: user123
+Content-Type: application/json
+
+### 2. 좋아요 제거
+DELETE {{host}}/api/v1/like/products/1
+X-USER-ID: user123
+Content-Type: application/json
+
+### 3. 좋아요 목록 조회
+GET {{host}}/api/v1/like/products?page=0&size=10
+X-USER-ID: user123

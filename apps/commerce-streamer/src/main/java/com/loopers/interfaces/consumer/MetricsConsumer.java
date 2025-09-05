@@ -1,5 +1,7 @@
 package com.loopers.interfaces.consumer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.event.EventHandled;
 import com.loopers.domain.event.EventHandledRepository;
 import com.loopers.domain.metrics.ProductMetrics;
@@ -13,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,7 @@ public class MetricsConsumer {
 
     private final ProductMetricsRepository productMetricsRepository;
     private final EventHandledRepository eventHandledRepository;
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(
         topics = {KafkaTopics.CATALOG_EVENTS, KafkaTopics.ORDER_EVENTS},
@@ -40,9 +42,19 @@ public class MetricsConsumer {
     )
     @Transactional
     public void consume(
-        @Payload KafkaEventMessage<?> message,
+        String messageJson,
         Acknowledgment ack
-    ) {
+    ) throws JsonProcessingException {
+
+        // JSON 파싱
+        KafkaEventMessage<?> message = objectMapper.readValue(
+            messageJson,
+            objectMapper.getTypeFactory().constructParametricType(
+                KafkaEventMessage.class,
+                Object.class
+            )
+        );
+
         String eventId = message.getEventId();
 
         try {
@@ -81,7 +93,7 @@ public class MetricsConsumer {
      */
     private void handleLikeAdded(KafkaEventMessage<?> message) {
         CatalogEventPayload.LikeAdded payload =
-            (CatalogEventPayload.LikeAdded) message.getPayload();
+            objectMapper.convertValue(message.getPayload(), CatalogEventPayload.LikeAdded.class);
 
         Long productId = payload.getProductId();
         LocalDate today = LocalDate.now();
@@ -110,7 +122,7 @@ public class MetricsConsumer {
      */
     private void handleLikeRemoved(KafkaEventMessage<?> message) {
         CatalogEventPayload.LikeRemoved payload =
-            (CatalogEventPayload.LikeRemoved) message.getPayload();
+            objectMapper.convertValue(message.getPayload(), CatalogEventPayload.LikeRemoved.class);
 
         Long productId = payload.getProductId();
         LocalDate today = LocalDate.now();
@@ -137,7 +149,7 @@ public class MetricsConsumer {
      */
     private void handleOrderCreated(KafkaEventMessage<?> message) {
         OrderEventPayload.OrderCreated payload =
-            (OrderEventPayload.OrderCreated) message.getPayload();
+            objectMapper.convertValue(message.getPayload(), OrderEventPayload.OrderCreated.class);
 
         LocalDate today = LocalDate.now();
 
