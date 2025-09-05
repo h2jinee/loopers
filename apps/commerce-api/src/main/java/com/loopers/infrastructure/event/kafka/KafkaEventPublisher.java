@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class KafkaEventPublisher {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<Object, Object> kafkaTemplate;
 
     /**
      * 이벤트를 Kafka로 발행
@@ -30,7 +30,7 @@ public class KafkaEventPublisher {
         log.debug("Kafka 이벤트 발행 - topic: {}, key: {}, eventType: {}", topic, key, message.getEventType());
 
         // 비동기 전송
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(topic, key, message);
+        CompletableFuture<SendResult<Object, Object>> future = kafkaTemplate.send(topic, key, message);
 
         // 콜백 처리
         future.whenComplete((result, ex) -> {

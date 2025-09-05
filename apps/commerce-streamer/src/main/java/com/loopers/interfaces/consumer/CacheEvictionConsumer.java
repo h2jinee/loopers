@@ -28,7 +28,7 @@ public class CacheEvictionConsumer {
     private static final String PRODUCT_RECOMMEND_KEY = "product:recommend:*";
 
     private final EventHandledRepository eventHandledRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @KafkaListener(
         topics = {KafkaTopics.CATALOG_EVENTS},
