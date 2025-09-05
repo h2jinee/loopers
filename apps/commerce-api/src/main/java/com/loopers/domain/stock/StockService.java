@@ -110,15 +110,19 @@ public class StockService {
      * 재고 차감 (비관적 락 사용)
      */
     @Transactional
-    public void decreaseStock(Long productId, Integer quantity) {
+    public StockChangeInfo decreaseStock(Long productId, Integer quantity) {
         Stock stock = stockRepository.findByProductIdWithLock(productId)
-            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND,
                 "재고 정보를 찾을 수 없습니다. productId: " + productId));
-        
+
+        Integer previousQuantity = stock.getQuantity();  // 이전 재고
         processDecrease(stock, quantity);
         stockRepository.save(stock);
-        
+
         log.info("재고 차감 완료 - productId: {}, quantity: {}", productId, quantity);
+
+        // 변경 정보 반환
+        return new StockChangeInfo(productId, previousQuantity, stock.getQuantity());
     }
     
     

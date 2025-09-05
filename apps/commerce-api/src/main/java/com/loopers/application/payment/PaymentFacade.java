@@ -1,6 +1,8 @@
 package com.loopers.application.payment;
 
 import com.loopers.application.event.payment.PaymentEvent;
+import com.loopers.application.stock.StockApplicationEventPublisher;
+import com.loopers.application.stock.StockChanged;
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderLine;
 import com.loopers.domain.order.OrderService;
@@ -13,15 +15,16 @@ import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.payment.PgPaymentInfo;
 import com.loopers.domain.payment.port.PaymentGatewayPort;
 import com.loopers.domain.payment.result.TransactionStatusResult;
+import com.loopers.domain.stock.StockChangeInfo;
 import com.loopers.domain.stock.StockInfo;
 import com.loopers.domain.stock.StockService;
 import com.loopers.interfaces.api.payment.PaymentDto;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import io.github.resilience4j.retry.annotation.Retry;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -43,7 +46,8 @@ public class PaymentFacade {
     private final PaymentGatewayPort paymentGatewayPort;
     private final RedisTemplate<String, String> redisTemplate;
 
-    private final ApplicationEventPublisher eventPublisher;
+    private final PaymentApplicationEventPublisher paymentEventPublisher;
+    private final StockApplicationEventPublisher stockEventPublisher;
 
     private static final String RESULT_KEY_PREFIX = "payment:result:";
     private static final long RESULT_TTL_MINUTES = 10;
@@ -69,13 +73,13 @@ public class PaymentFacade {
         }
 
         log.info("결제 처리 시작 완료 - orderId: {}, method: {}, transactionId: {}", request.orderId(), request.paymentMethod(),
-            result.transactionId());
+            Objects.requireNonNull(result).transactionId());
 
         return result;
     }
 
     /**
-     * 재고 차감 및 예약 생성 (private 메서드)
+     * 재고 차감 및 예약 생성
      */
     private void processStockForPayment(Order order) {
         for (OrderLine line : order.getOrderLines()) {
@@ -88,26 +92,35 @@ public class PaymentFacade {
             }
 
             // 재고 차감
-            stockService.decreaseStock(line.getProductId(), line.getQuantity());
+            StockChangeInfo changeInfo = stockService.decreaseStock(line.getProductId(), line.getQuantity());
 
             // 재고 예약 생성 (나중에 확정/취소 처리용)
             stockService.createReservation(order.getId(), line.getProductId(), line.getQuantity());
+
+            // 재고 이벤트 발행
+            StockChanged event = StockChanged.from(
+                changeInfo.productId(),
+                changeInfo.previousQuantity(),
+                changeInfo.currentQuantity(),
+                "ORDER_PAYMENT"
+            );
+            stockEventPublisher.publish(event);
         }
 
         log.debug("재고 처리 완료 - orderId: {}", order.getId());
     }
 
     /**
-     * 포인트 결제 처리 (private 메서드)
+     * 포인트 결제 처리
      */
     private PaymentResult processPointPayment(String userId, PaymentDto.V1.Initiate.Request request) {
         PaymentResult result = paymentProcessor.processPointPayment(
             new PaymentCommand.Point(request.orderId(), userId, request.toMoney()));
 
         if (result.isSuccess()) {
-            eventPublisher.publishEvent(PaymentEvent.Completed.of(request.orderId()));
+            paymentEventPublisher.publish(PaymentEvent.Completed.of(request.orderId()));
         } else {
-            eventPublisher.publishEvent(PaymentEvent.Failed.of(request.orderId(), "POINT_PAYMENT_FAILED"));
+            paymentEventPublisher.publish(PaymentEvent.Failed.of(request.orderId(), "POINT_PAYMENT_FAILED"));
         }
 
         return result;

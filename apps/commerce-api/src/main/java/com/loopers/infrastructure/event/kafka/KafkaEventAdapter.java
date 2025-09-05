@@ -5,6 +5,7 @@ import com.loopers.application.like.LikeRemoved;
 import com.loopers.application.order.OrderCancelled;
 import com.loopers.application.order.OrderConfirmed;
 import com.loopers.application.event.order.OrderEvent;
+import com.loopers.application.stock.StockChanged;
 import com.loopers.kafka.EventTypes;
 import com.loopers.kafka.KafkaTopics;
 import com.loopers.kafka.message.KafkaEventMessage;
@@ -143,5 +144,33 @@ public class KafkaEventAdapter {
             );
 
         kafkaEventPublisher.publish(KafkaTopics.ORDER_EVENTS, String.valueOf(event.orderId()), message);
+    }
+    
+    // ==================== Stock Events ====================
+    
+    /**
+     * 재고 변경 이벤트 처리
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleStockChanged(StockChanged event) {
+        log.info("재고 변경 이벤트 처리 - productId: {}, previousQty: {}, currentQty: {}, reason: {}",
+            event.productId(), event.previousQuantity(), event.currentQuantity(), event.changeReason());
+
+        CatalogEventPayload.StockChanged payload = CatalogEventPayload.StockChanged.builder()
+            .productId(event.productId())
+            .previousQuantity(event.previousQuantity())
+            .currentQuantity(event.currentQuantity())
+            .changeReason(event.changeReason())
+            .changedAt(event.changedAt())
+            .build();
+
+        KafkaEventMessage<CatalogEventPayload.StockChanged> message =
+            KafkaEventMessage.of(
+                EventTypes.STOCK_CHANGED,
+                String.valueOf(event.productId()),
+                payload
+            );
+
+        kafkaEventPublisher.publish(KafkaTopics.CATALOG_EVENTS, String.valueOf(event.productId()), message);
     }
 }
