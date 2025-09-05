@@ -49,7 +49,7 @@ public class MetricsConsumer {
 	@Transactional
 	public void consumeBatch(
 		List<String> messages,
-		@Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+        @Header(KafkaHeaders.RECEIVED_TOPIC) List<String> topics,
 		Acknowledgment ack
 	) {
 		log.info("배치 처리 시작 - {} 건", messages.size());
@@ -57,7 +57,15 @@ public class MetricsConsumer {
 		int processedCount = 0;
 		int failedCount = 0;
 
-		for (String messageJson : messages) {
+        for (int i = 0; i < messages.size(); i++) {
+            String messageJson = messages.get(i);
+            String topic = topics.get(i);  // 같은 인덱스의 토픽
+
+            if (messageJson == null || messageJson.isEmpty()) {
+                log.warn("빈 메시지 스킵");
+                continue;
+            }
+
 			try {
 				// JSON 파싱
 				KafkaEventMessage<?> message = objectMapper.readValue(

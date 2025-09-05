@@ -51,16 +51,17 @@ public class OutboxEventPublisher implements EventPublisher {
 		}
 	}
 
-	private String resolveTopicFor(String eventType) {
-		// 이벤트 타입에 따라 토픽 결정
-		if (eventType.startsWith("Like") || eventType.startsWith("Stock")) {
-			return KafkaTopics.CATALOG_EVENTS;
-		}
-		if (eventType.startsWith("Order") || eventType.startsWith("Payment")) {
-			return KafkaTopics.ORDER_EVENTS;
-		}
+    private String resolveTopicFor(String eventType) {
+        // 이벤트 타입에 따라 토픽 결정
+        if (eventType.contains("Like") || eventType.contains("Added") ||
+            eventType.contains("Removed") || eventType.contains("Stock")) {
+            return KafkaTopics.CATALOG_EVENTS;
+        }
+        if (eventType.contains("Order") || eventType.contains("Payment")) {
+            return KafkaTopics.ORDER_EVENTS;
+        }
 
-		log.warn("알 수 없는 이벤트 타입: {}, 기본 토픽 사용", eventType);
-		return "default-events";
-	}
+        log.warn("알 수 없는 이벤트 타입: {}, 기본 토픽 사용", eventType);
+        return KafkaTopics.CATALOG_EVENTS;
+    }
 }

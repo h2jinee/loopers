@@ -1,5 +1,6 @@
 package com.loopers.interfaces.consumer;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.event.DeadLetterKafkaEvent;
 import com.loopers.domain.event.DeadLetterKafkaEventRepository;
@@ -34,7 +35,11 @@ public class DlqConsumer {
 			log.info("DLQ 메시지 수신: {}", messageJson);
 
 			// DLQ 메시지 파싱
-			Map<String, Object> dlqData = objectMapper.readValue(messageJson, Map.class);
+            Map<String, Object> dlqData = objectMapper.readValue(
+                messageJson,
+                new TypeReference<>() {
+                }
+            );
 
 			String originalTopic = (String) dlqData.get("originalTopic");
 			String originalMessage = (String) dlqData.get("originalMessage");
@@ -55,9 +60,6 @@ public class DlqConsumer {
 
 			log.warn("DLQ 메시지 DB 저장 완료 - topic: {}, consumer: {}",
 				originalTopic, consumerName);
-
-			// TODO: 알림 발송 (Slack, Email 등)
-			// notificationService.sendDlqAlert(originalTopic, consumerName, errorMessage);
 
 			ack.acknowledge();
 

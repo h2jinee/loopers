@@ -5,18 +5,19 @@ package com.loopers.kafka;
  * eventType 필드에 사용되는 값들
  */
 public class EventTypes {
-    // Catalog Events (상품 도메인)
-    public static final String LIKE_ADDED = "LikeAdded";
-    public static final String LIKE_REMOVED = "LikeRemoved";
+    // 좋아요 이벤트
+    public static final String LIKE_ADDED = "Added";
+    public static final String LIKE_REMOVED = "Removed";
+
+    // 재고 이벤트
     public static final String STOCK_CHANGED = "StockChanged";
 
-    // Order Events (주문 도메인)
+    // 주문 이벤트
     public static final String ORDER_CREATED = "OrderCreated";
     public static final String ORDER_CONFIRMED = "OrderConfirmed";
     public static final String ORDER_CANCELLED = "OrderCancelled";
 
-    // private 생성자로 인스턴스화 방지
-    private EventTypes() {
-        throw new IllegalStateException("Constants class");
-    }
+    // 결제 이벤트
+    public static final String PAYMENT_COMPLETED = "PaymentCompleted";
+    public static final String PAYMENT_FAILED = "PaymentFailed";
 }

@@ -30,14 +30,14 @@ public class DlqPublisher {
 			dlqMessage.put("originalMessage", originalMessage);
 			dlqMessage.put("consumerName", consumerName);
 			dlqMessage.put("errorMessage", errorMessage);
-			dlqMessage.put("failedAt", LocalDateTime.now());
+            dlqMessage.put("failedAt", LocalDateTime.now().toString());
 			dlqMessage.put("retryCount", 0);
 
 			String dlqJson = objectMapper.writeValueAsString(dlqMessage);
 
-			kafkaTemplate.send(KafkaTopics.DLQ_TOPIC, dlqJson);
+            kafkaTemplate.send(KafkaTopics.DLQ_TOPIC, dlqJson).get();
 
-			log.warn("메시지를 DLQ로 전송 - originalTopic: {}, consumer: {}, error: {}",
+            log.warn("메시지를 DLQ로 전송 - originalTopic: {}, consumer: {}, error: {}",
 				originalTopic, consumerName, errorMessage);
 
 		} catch (Exception e) {
