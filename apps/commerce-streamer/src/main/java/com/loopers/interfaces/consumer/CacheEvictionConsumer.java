@@ -65,10 +65,24 @@ public class CacheEvictionConsumer {
 
             switch (message.getEventType()) {
                 case EventTypes.LIKE_ADDED,
-                     EventTypes.LIKE_REMOVED,
-                     EventTypes.STOCK_CHANGED -> {
+                     EventTypes.LIKE_REMOVED -> {
                     evictProductCache(message);
                     cacheEvicted = true;
+                }
+                case EventTypes.STOCK_CHANGED -> {
+                    // 재고 변경
+                    CatalogEventPayload.StockChanged stockEvent =
+                        objectMapper.convertValue(message.getPayload(), CatalogEventPayload.StockChanged.class);
+
+                    // 재고가 0이 되었을 때만 캐시 삭제
+                    if (stockEvent.getCurrentQuantity() == 0) {
+                        evictProductCache(message);
+                        cacheEvicted = true;
+                        log.info("재고 소진 - productId: {} 캐시 삭제", stockEvent.getProductId());
+                    } else {
+                        log.debug("재고 변경되었지만 소진 아님 - productId: {}, 현재재고: {}",
+                            stockEvent.getProductId(), stockEvent.getCurrentQuantity());
+                    }
                 }
                 default -> log.debug("캐시 무효화 대상 아님 - type: {}", message.getEventType());
             }
