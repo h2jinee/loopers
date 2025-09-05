@@ -40,7 +40,7 @@ public class PaymentDto {
 
             public record Response(
                 Long orderId,
-                String transactionId,
+                String transactionKey,
                 BigDecimal amount,
                 PaymentMethod paymentMethod,
                 PaymentStatus status
@@ -48,7 +48,7 @@ public class PaymentDto {
                 public static Response from(Long orderId, PaymentResult result) {
                     return new Response(
                         orderId,
-                        result.transactionId(),
+                        result.transactionKey(),
                         result.amount().amount(),
                         result.method(),
                         result.isSuccess() ? PaymentStatus.PENDING : PaymentStatus.FAILED
@@ -69,7 +69,7 @@ public class PaymentDto {
                 String orderId,
 
                 @NotNull(message = "결제 상태는 필수입니다")
-                PaymentStatus status,
+                String status,  // String으로 변경하여 외부 시스템과 호환
 
                 String reason  // 실패 사유
             ) {
@@ -77,9 +77,21 @@ public class PaymentDto {
                     return PaymentResultCommand.basicResult(
                         transactionKey,
                         Long.parseLong(orderId),
-                        status == PaymentStatus.COMPLETED,
+                        mapToSuccessStatus(status),
                         reason
                     );
+                }
+                
+                /**
+                 * 외부 PG사의 다양한 status 값을 내부 도메인 모델로 매핑
+                 */
+                private boolean mapToSuccessStatus(String externalStatus) {
+                    return switch (externalStatus.toUpperCase()) {
+                        case "SUCCESS", "COMPLETED", "PAID", "DONE" -> true;  // 성공
+                        case "FAILED", "ERROR", "REJECTED", "CANCELLED" -> false;  // 실패
+                        case "PENDING", "PROCESSING" -> false;  // 대기중도 일단 실패로 처리
+                        default -> false;  // 알 수 없는 상태는 실패로 처리
+                    };
                 }
             }
 

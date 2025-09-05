@@ -27,23 +27,23 @@ public class PgPaymentAdapter implements PgPaymentPort {
 
     @Override
     public PgPaymentResult processPayment(PgPaymentCommand command) {
-        String tempTransactionId = generateTempTransactionId(command.orderId());
+        String tempTransactionKey = generateTempTransactionKey(command.orderId());
         PaymentRequest request = toPaymentRequest(command);
         ApiResponse<PaymentResponse> response = paymentGatewayClient.send(command.userId(), request);
 
         if (response == null || response.data() == null) {
             log.error("PG 응답이 null입니다. orderId={}", command.orderId());
-            return PgPaymentResult.pending(tempTransactionId, "PG 시스템 응답 없음");
+            return PgPaymentResult.pending(tempTransactionKey, "PG 시스템 응답 없음");
         }
 
         PaymentResponse pgResponse = response.data();
 
-        if (pgResponse.isSuccess()) {
+        if (pgResponse.isPending() || pgResponse.isSuccess()) {
             log.info("PG 결제 요청 성공: transactionKey={}", pgResponse.transactionKey());
             return PgPaymentResult.pending(pgResponse.transactionKey(), "결제 처리중");
         } else {
             log.warn("PG 결제 실패: reason={}", pgResponse.reason());
-            return PgPaymentResult.failure(pgResponse.reason());
+            return PgPaymentResult.failure(pgResponse.reason() != null ? pgResponse.reason() : "알 수 없는 오류");
         }
     }
 
@@ -60,7 +60,7 @@ public class PgPaymentAdapter implements PgPaymentPort {
         };
     }
 
-    private String generateTempTransactionId(Long orderId) {
+    private String generateTempTransactionKey(Long orderId) {
         return String.format("TEMP_%s_%s", orderId, UUID.randomUUID().toString().substring(0, 8));
     }
 }

@@ -5,6 +5,7 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -141,7 +142,7 @@ public class StockService {
     /**
      * 재고 롤백 (예약 취소 + 재고 복원)
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void rollbackStock(Long orderId) {
         List<StockReservation> reservations = stockReservationRepository.findByOrderId(orderId);
         

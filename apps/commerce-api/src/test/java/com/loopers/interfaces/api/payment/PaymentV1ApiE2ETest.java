@@ -70,7 +70,7 @@ class PaymentV1ApiE2ETest {
     @DisplayName("PG 결제 성공 플로우")
     void pg_payment_success_flow() {
         // given
-        String transactionId = "TXN_PG_" + System.currentTimeMillis();
+        String transactionKey = "TXN_PG_" + System.currentTimeMillis();
 
         PaymentDto.V1.Initiate.Request request = new PaymentDto.V1.Initiate.Request(
             TEST_ORDER_ID,
@@ -81,14 +81,14 @@ class PaymentV1ApiE2ETest {
         );
 
         when(paymentGatewayClient.send(any(), any()))
-            .thenReturn(createSuccessResponse(transactionId));
+            .thenReturn(createSuccessResponse(transactionKey));
 
         // when
         PaymentResult result = paymentFacade.initiatePayment(TEST_USER_ID, request);
 
         // then
         assertThat(result.isPending()).isTrue();
-        assertThat(result.transactionId()).isNotNull();
+        assertThat(result.transactionKey()).isNotNull();
     }
 
     @Test
@@ -138,11 +138,11 @@ class PaymentV1ApiE2ETest {
     @DisplayName("PG 콜백 처리 - 성공")
     void pg_callback_success() {
         // given
-        String transactionId = "TXN_CALLBACK_" + System.currentTimeMillis();
-        createPendingPayment(transactionId);
+        String transactionKey = "TXN_CALLBACK_" + System.currentTimeMillis();
+        createPendingPayment(transactionKey);
 
         PaymentResultCommand command = PaymentResultCommand.basicResult(
-            transactionId, TEST_ORDER_ID, true, null
+            transactionKey, TEST_ORDER_ID, true, null
         );
 
         // when - 비동기 실행
@@ -152,7 +152,7 @@ class PaymentV1ApiE2ETest {
         await()
             .atMost(2, TimeUnit.SECONDS)
             .untilAsserted(() -> {
-                Payment payment = paymentRepository.findByTransactionId(transactionId)
+                Payment payment = paymentRepository.findByTransactionKey(transactionKey)
                     .orElseThrow();
                 assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
             });
@@ -180,21 +180,21 @@ class PaymentV1ApiE2ETest {
     }
 
     // 헬퍼 메서드들
-    private ApiResponse<PaymentResponse> createSuccessResponse(String transactionId) {
+    private ApiResponse<PaymentResponse> createSuccessResponse(String transactionKey) {
         PaymentResponse response = new PaymentResponse(
-            transactionId,
+            transactionKey,
             "SUCCESS",
             null
         );
         return ApiResponse.success(response);
     }
 
-    private void createPendingPayment(String transactionId) {
+    private void createPendingPayment(String transactionKey) {
         Payment payment = Payment.createPgPayment(
             TEST_ORDER_ID,
             TEST_USER_ID,
             Money.of(BigDecimal.valueOf(10000)),
-            transactionId
+            transactionKey
         );
         paymentRepository.save(payment);
     }

@@ -35,14 +35,14 @@ public class PgPaymentStrategy implements PaymentStrategy {
                 return PaymentResult.success(
                     payment.getPaymentMethod(),
                     payment.getAmount(),
-                    payment.getTransactionId(),
+                    payment.getTransactionKey(),
                     command.userId()
                 );
             } else if (payment.isPending()) {
                 return PaymentResult.pending(
                     payment.getPaymentMethod(),
                     payment.getAmount(),
-                    payment.getTransactionId(),
+                    payment.getTransactionKey(),
                     command.userId()
                 );
             } else {  // FAILED

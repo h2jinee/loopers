@@ -76,11 +76,11 @@ public class PaymentSyncService {
 
     @Transactional
     public void syncSinglePayment(Payment payment) {
-        if (!payment.getTransactionId().startsWith("TEMP_")) {
+        if (!payment.getTransactionKey().startsWith("TEMP_")) {
             try {
                 ApiResponse<TransactionDetailResponse> response = paymentGatewayClient.getTransaction(
                     payment.getUserId(),
-                    payment.getTransactionId()
+                    payment.getTransactionKey()
                 );
 
                 if (response != null && response.data() != null) {
@@ -88,7 +88,7 @@ public class PaymentSyncService {
                     updatePaymentStatus(payment, detail);
                 }
             } catch (Exception e) {
-                log.warn("PG 상태 조회 실패: transactionId={}", payment.getTransactionId(), e);
+                log.warn("PG 상태 조회 실패: transactionKey={}", payment.getTransactionKey(), e);
             }
         } else {
             checkOrderTransactions(payment);
@@ -100,7 +100,7 @@ public class PaymentSyncService {
 
         if ("SUCCESS".equals(status) || "COMPLETED".equals(status)) {
             payment.complete();
-            log.info("결제 동기화 - 완료 처리: orderId={}, transactionId={}", payment.getOrderId(), payment.getTransactionId());
+            log.info("결제 동기화 - 완료 처리: orderId={}, transactionKey={}", payment.getOrderId(), payment.getTransactionKey());
 
         } else if ("FAILED".equals(status) || "REJECTED".equals(status)) {
             payment.fail(detail.reason() != null ? detail.reason() : "PG 결제 실패");
@@ -123,7 +123,7 @@ public class PaymentSyncService {
 
                 OrderResponse.TransactionResponse latestTransaction = response.data().transactions().getFirst();
 
-                payment.setTransactionId(latestTransaction.transactionKey());
+                payment.setTransactionKey(latestTransaction.transactionKey());
 
                 // TransactionResponse를 기반으로 상태 업데이트
                 if (latestTransaction.isSuccess()) {

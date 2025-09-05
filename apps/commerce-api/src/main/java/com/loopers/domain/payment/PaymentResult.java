@@ -6,17 +6,17 @@ import java.time.LocalDateTime;
 public record PaymentResult(
     PaymentMethod method,
     Money amount,
-    String transactionId,
+    String transactionKey,
     PaymentResultStatus status,
     LocalDateTime processedAt,
     String message,
     String userId     // 결제한 사용자 ID
 ) {
-    public static PaymentResult success(PaymentMethod method, Money amount, String transactionId, String userId) {
+    public static PaymentResult success(PaymentMethod method, Money amount, String transactionKey, String userId) {
         return new PaymentResult(
             method,
             amount,
-            transactionId,
+            transactionKey,
             PaymentResultStatus.SUCCESS,
             LocalDateTime.now(),
             "결제 성공",
@@ -24,11 +24,11 @@ public record PaymentResult(
         );
     }
 
-    public static PaymentResult pending(PaymentMethod method, Money amount, String transactionId, String userId) {
+    public static PaymentResult pending(PaymentMethod method, Money amount, String transactionKey, String userId) {
         return new PaymentResult(
             method,
             amount,
-            transactionId,
+            transactionKey,
             PaymentResultStatus.PENDING,
             LocalDateTime.now(),
             "결제 처리 중",

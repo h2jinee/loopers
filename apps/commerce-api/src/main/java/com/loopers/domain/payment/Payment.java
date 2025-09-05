@@ -28,7 +28,7 @@ public class Payment extends BaseEntity {
     private PaymentMethod paymentMethod;
     
     @Column(unique = true)
-    private String transactionId;
+    private String transactionKey;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -41,23 +41,23 @@ public class Payment extends BaseEntity {
         String userId,
         Money amount,
         PaymentMethod paymentMethod,
-        String transactionId
+        String transactionKey
     ) {
         this.orderId = orderId;
         this.userId = userId;
         this.amount = amount;
         this.paymentMethod = paymentMethod;
-        this.transactionId = transactionId;
+        this.transactionKey = transactionKey;
         this.status = PaymentStatus.PENDING;
     }
-    
+
     /**
      * 포인트 결제 생성
      */
     public static Payment createPointPayment(Long orderId, String userId, Money amount) {
         return new Payment(orderId, userId, amount, PaymentMethod.POINT, null);
     }
-    
+
     /**
      * PG 결제 생성
      */
@@ -65,18 +65,18 @@ public class Payment extends BaseEntity {
         Long orderId,
         String userId,
         Money amount,
-        String transactionId
+        String transactionKey
     ) {
-        return new Payment(orderId, userId, amount, PaymentMethod.PG, transactionId);
+        return new Payment(orderId, userId, amount, PaymentMethod.PG, transactionKey);
     }
-    
+
     /**
      * 포인트 결제용 임시 Payment 객체 생성 (취소용)
      */
     public static Payment forPoint(Long orderId, String userId, Money amount) {
         return createPointPayment(orderId, userId, amount);
     }
-    
+
     /**
      * 결제 완료 처리
      */
@@ -86,7 +86,7 @@ public class Payment extends BaseEntity {
         }
         this.status = PaymentStatus.COMPLETED;
     }
-    
+
     /**
      * 결제 실패 처리
      */
@@ -101,15 +101,15 @@ public class Payment extends BaseEntity {
     /**
      * 트랜잭션 ID 업데이트 (TEMP ID를 실제 ID로 교체)
      */
-    public void updateTransactionId(String transactionId) {
-        if (transactionId == null || transactionId.isBlank()) {
+    public void updateTransactionKey(String transactionKey) {
+        if (transactionKey == null || transactionKey.isBlank()) {
             throw new IllegalArgumentException("트랜잭션 ID는 필수입니다.");
         }
-        this.transactionId = transactionId;
+        this.transactionKey = transactionKey;
     }
-    
-    public void setTransactionId(String transactionId) {
-        updateTransactionId(transactionId);
+
+    public void setTransactionKey(String transactionKey) {
+        updateTransactionKey(transactionKey);
     }
     
     public boolean isCompleted() {

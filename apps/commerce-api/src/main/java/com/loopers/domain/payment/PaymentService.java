@@ -43,15 +43,15 @@ public class PaymentService {
             orderId,
             userId,
             amount,
-            result.transactionId()
+            result.transactionKey()
         );
         
         if (result.isSuccess()) {
             payment.complete();
-            log.info("PG 결제 완료: orderId={}, transactionId={}", orderId, result.transactionId());
+            log.info("PG 결제 완료: orderId={}, transactionKey={}", orderId, result.transactionKey());
         } else if (result.isPending()) {
-            log.info("PG 결제 대기중: orderId={}, transactionId={}, reason={}", 
-                orderId, result.transactionId(), result.failureReason());
+            log.info("PG 결제 대기중: orderId={}, transactionKey={}, reason={}",
+                orderId, result.transactionKey(), result.failureReason());
         } else {
             payment.fail(result.failureReason());
             log.warn("PG 결제 실패: orderId={}, reason={}", orderId, result.failureReason());
@@ -75,7 +75,7 @@ public class PaymentService {
         if (result.method() == PaymentMethod.POINT) {
             payment = Payment.createPointPayment(orderId, result.userId(), result.amount());
         } else if (result.method() == PaymentMethod.PG) {
-            payment = Payment.createPgPayment(orderId, result.userId(), result.amount(), result.transactionId());
+            payment = Payment.createPgPayment(orderId, result.userId(), result.amount(), result.transactionKey());
         } else {
             throw new IllegalArgumentException("COMBINED 타입은 개별 결제로 처리되어야 합니다.");
         }
@@ -92,26 +92,26 @@ public class PaymentService {
     /**
      * 결제 완료 처리 (콜백용)
      */
-    public Payment completePayment(String transactionId) {
-        Payment payment = paymentRepository.findByTransactionId(transactionId)
-            .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다: " + transactionId));
+    public Payment completePayment(String transactionKey) {
+        Payment payment = paymentRepository.findByTransactionKey(transactionKey)
+            .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다: " + transactionKey));
         
         payment.complete();
         paymentRepository.save(payment);
-        log.info("결제 완료 처리: transactionId={}", transactionId);
+        log.info("결제 완료 처리: transactionKey={}", transactionKey);
         return payment;
     }
     
     /**
      * 결제 실패 처리 (콜백용)
      */
-    public void failPayment(String transactionId, String reason) {
-        Payment payment = paymentRepository.findByTransactionId(transactionId)
-            .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다: " + transactionId));
+    public void failPayment(String transactionKey, String reason) {
+        Payment payment = paymentRepository.findByTransactionKey(transactionKey)
+            .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다: " + transactionKey));
         
         payment.fail(reason);
         paymentRepository.save(payment);
-        log.warn("결제 실패 처리: transactionId={}, reason={}", transactionId, reason);
+        log.warn("결제 실패 처리: transactionKey={}, reason={}", transactionKey, reason);
     }
     
     /**

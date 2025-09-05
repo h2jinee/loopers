@@ -72,8 +72,8 @@ public class PaymentFacade {
             result = processPgPayment(userId, request);
         }
 
-        log.info("결제 처리 시작 완료 - orderId: {}, method: {}, transactionId: {}", request.orderId(), request.paymentMethod(),
-            Objects.requireNonNull(result).transactionId());
+        log.info("결제 처리 시작 완료 - orderId: {}, method: {}, transactionKey: {}", request.orderId(), request.paymentMethod(),
+            Objects.requireNonNull(result).transactionKey());
 
         return result;
     }
@@ -207,7 +207,7 @@ public class PaymentFacade {
      * 개별 결제 상태를 PG에서 확인하여 동기화
      */
     private boolean synchronizePaymentStatus(PaymentInfo.Pending payment) {
-        String transactionKey = payment.transactionId();
+        String transactionKey = payment.transactionKey();
         if (transactionKey == null || transactionKey.isBlank()) {
             return false;
         }
@@ -241,7 +241,7 @@ public class PaymentFacade {
 
         for (PaymentInfo.Timeout payment : timeoutPayments) {
             try {
-                paymentService.failPayment(payment.transactionId(), "결제 처리 시간 초과");
+                paymentService.failPayment(payment.transactionKey(), "결제 처리 시간 초과");
                 orderService.updateOrderStatusToPaymentFailed(payment.orderId());
             } catch (Exception e) {
                 log.error("타임아웃 결제 처리 실패: paymentId={}", payment.paymentId(), e);

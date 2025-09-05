@@ -9,14 +9,14 @@ public class PaymentInfo {
         Long paymentId,
         Long orderId,
         String userId,
-        String transactionId
+        String transactionKey
     ) {
         public static Pending from(Payment payment) {
             return new Pending(
                 payment.getId(),
                 payment.getOrderId(),
                 payment.getUserId(),
-                payment.getTransactionId()
+                payment.getTransactionKey()
             );
         }
     }
@@ -27,13 +27,13 @@ public class PaymentInfo {
     public record Timeout(
         Long paymentId,
         Long orderId,
-        String transactionId
+        String transactionKey
     ) {
         public static Timeout from(Payment payment) {
             return new Timeout(
                 payment.getId(),
                 payment.getOrderId(),
-                payment.getTransactionId()
+                payment.getTransactionKey()
             );
         }
     }
@@ -45,14 +45,14 @@ public class PaymentInfo {
         Long paymentId,
         String userId,
         PaymentStatus status,
-        String transactionId
+        String transactionKey
     ) {
         public static Summary from(Payment payment) {
             return new Summary(
                 payment.getId(),
                 payment.getUserId(),
                 payment.getStatus(),
-                payment.getTransactionId()
+                payment.getTransactionKey()
             );
         }
     }
