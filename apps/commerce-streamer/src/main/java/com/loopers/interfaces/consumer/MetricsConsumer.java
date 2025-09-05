@@ -99,12 +99,16 @@ public class MetricsConsumer {
 				}
 
 				// 3. 이벤트 처리
-				switch (message.getEventType()) {
-					case EventTypes.LIKE_ADDED -> handleLikeAdded(message);
-					case EventTypes.LIKE_REMOVED -> handleLikeRemoved(message);
-					case EventTypes.ORDER_CREATED -> handleOrderCreated(message);
-					default -> log.debug("메트릭 처리 대상 아님 - type: {}", message.getEventType());
-				}
+                switch (message.getEventType()) {
+                    case EventTypes.LIKE_ADDED -> handleLikeAdded(message);
+                    case EventTypes.LIKE_REMOVED -> handleLikeRemoved(message);
+                    case EventTypes.ORDER_CREATED -> handleOrderCreated(message);
+                    case EventTypes.ORDER_CONFIRMED -> handleOrderConfirmed(message);
+                    case EventTypes.ORDER_CANCELLED -> handleOrderCancelled(message);
+                    case EventTypes.PAYMENT_COMPLETED -> handlePaymentCompleted(message);
+                    case EventTypes.PAYMENT_FAILED -> handlePaymentFailed(message);
+                    default -> log.debug("메트릭 처리 대상 아님 - type: {}", message.getEventType());
+                }
 
 				// 4. 처리 완료 기록
 				eventHandledRepository.save(
@@ -204,7 +208,7 @@ public class MetricsConsumer {
         LocalDate today = LocalDate.now();
 
         // 주문의 각 상품별로 처리
-        for (OrderEventPayload.OrderItem item : payload.getItems()) {
+        for (OrderEventPayload.OrderItem item : payload.getOrderItems()) {
             Long productId = item.getProductId();
 
             ProductMetrics metrics = productMetricsRepository
@@ -224,5 +228,34 @@ public class MetricsConsumer {
             log.info("주문 메트릭 업데이트 - productId: {}, orderCount: {}, salesQty: {}",
                 productId, metrics.getOrderCount(), metrics.getSalesQuantity());
         }
+    }
+
+    /**
+     * 주문 확정 처리
+     */
+    private void handleOrderConfirmed(KafkaEventMessage<?> message) {
+        log.info("주문 확정 이벤트 처리 - aggregateId: {}", message.getAggregateId());
+    }
+
+    /**
+     * 주문 취소 처리
+     */
+    private void handleOrderCancelled(KafkaEventMessage<?> message) {
+        log.info("주문 취소 이벤트 처리 - aggregateId: {}", message.getAggregateId());
+    }
+
+    /**
+     * 결제 완료 처리
+     */
+    private void handlePaymentCompleted(KafkaEventMessage<?> message) {
+        log.info("결제 완료 이벤트 처리 - aggregateId: {}", message.getAggregateId());
+    }
+
+    /**
+     * 결제 실패 처리
+     */
+    private void handlePaymentFailed(KafkaEventMessage<?> message) {
+        log.info("결제 실패 이벤트 처리 - aggregateId: {}, payload: {}",
+            message.getAggregateId(), message.getPayload());
     }
 }

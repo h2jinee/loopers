@@ -10,14 +10,18 @@ public class EventTypes {
     public static final String LIKE_REMOVED = "Removed";
 
     // 재고 이벤트
-    public static final String STOCK_CHANGED = "StockChanged";
+    public static final String STOCK_CHANGED = "Changed";
 
     // 주문 이벤트
-    public static final String ORDER_CREATED = "OrderCreated";
-    public static final String ORDER_CONFIRMED = "OrderConfirmed";
-    public static final String ORDER_CANCELLED = "OrderCancelled";
+    public static final String ORDER_CREATED = "Created";
+    public static final String ORDER_CONFIRMED = "Confirmed";
+    public static final String ORDER_CANCELLED = "Cancelled";
 
     // 결제 이벤트
-    public static final String PAYMENT_COMPLETED = "PaymentCompleted";
-    public static final String PAYMENT_FAILED = "PaymentFailed";
+    public static final String PAYMENT_COMPLETED = "Completed";
+    public static final String PAYMENT_FAILED = "Failed";
+
+    private EventTypes() {
+        throw new IllegalStateException("Constants class");
+    }
 }

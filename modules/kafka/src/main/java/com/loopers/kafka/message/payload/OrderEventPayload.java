@@ -25,7 +25,7 @@ public class OrderEventPayload {
         private Long orderId;
         private String userId;
         private BigDecimal totalAmount;
-        private List<OrderItem> items;
+        private List<OrderItem> orderItems;
         private LocalDateTime createdAt;
     }
 
