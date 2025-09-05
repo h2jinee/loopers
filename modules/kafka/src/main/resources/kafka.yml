@@ -37,9 +37,13 @@ spring:
         max.poll.records: 100
         max.poll.interval.ms: 300000
         session.timeout.ms: 30000
+        fetch.min.bytes: 1024  # 최소 1KB 모이면 가져오기
+        fetch.max.wait.ms: 500  # 최대 500ms 대기
 
     listener:
       ack-mode: manual
+      type: batch  # 배치 모드 활성화
+      concurrency: 3  # 동시 처리 스레드 수
 
 ---
 spring.config.activate.on-profile: local, test

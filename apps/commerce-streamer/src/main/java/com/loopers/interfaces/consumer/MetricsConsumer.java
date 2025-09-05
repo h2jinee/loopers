@@ -6,6 +6,7 @@ import com.loopers.domain.event.EventHandled;
 import com.loopers.domain.event.EventHandledRepository;
 import com.loopers.domain.metrics.ProductMetrics;
 import com.loopers.domain.metrics.ProductMetricsRepository;
+import com.loopers.interfaces.consumer.support.DlqPublisher;
 import com.loopers.kafka.EventTypes;
 import com.loopers.kafka.KafkaTopics;
 import com.loopers.kafka.message.KafkaEventMessage;
@@ -15,10 +16,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -35,80 +39,95 @@ public class MetricsConsumer {
     private final ProductMetricsRepository productMetricsRepository;
     private final EventHandledRepository eventHandledRepository;
     private final ObjectMapper objectMapper;
+	private final DlqPublisher dlqPublisher;
 
 	@KafkaListener(
 		topics = {KafkaTopics.CATALOG_EVENTS, KafkaTopics.ORDER_EVENTS},
-		groupId = "metrics-group",
-		containerFactory = "kafkaListenerContainerFactory"
+		groupId = "metrics-batch-group",
+		containerFactory = "BATCH_LISTENER_DEFAULT"
 	)
 	@Transactional
-	public void consume(
-		String messageJson,
+	public void consumeBatch(
+		List<String> messages,
+		@Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
 		Acknowledgment ack
-	) throws JsonProcessingException {
+	) {
+		log.info("배치 처리 시작 - {} 건", messages.size());
 
-		// JSON 파싱
-		KafkaEventMessage<?> message = objectMapper.readValue(
-			messageJson,
-			objectMapper.getTypeFactory().constructParametricType(
-				KafkaEventMessage.class,
-				Object.class
-			)
-		);
+		int processedCount = 0;
+		int failedCount = 0;
 
-		String eventId = message.getEventId();
+		for (String messageJson : messages) {
+			try {
+				// JSON 파싱
+				KafkaEventMessage<?> message = objectMapper.readValue(
+					messageJson,
+					objectMapper.getTypeFactory().constructParametricType(
+						KafkaEventMessage.class,
+						Object.class
+					)
+				);
 
-		try {
-			// 1. 멱등성 체크
-			if (eventHandledRepository.existsByEventIdAndConsumerName(eventId, CONSUMER_NAME)) {
-				log.debug("이미 처리된 이벤트 스킵 - eventId: {}", eventId);
-				ack.acknowledge();
-				return;
-			}
+				String eventId = message.getEventId();
 
-			// 2. Version 체크 (순서가 뒤바뀐 이벤트 처리)
-			Long eventVersion = message.getVersion() != null
-				? message.getVersion().longValue()
-				: System.currentTimeMillis() / 1000;
+				// 1. 멱등성 체크
+				if (eventHandledRepository.existsByEventIdAndConsumerName(eventId, CONSUMER_NAME)) {
+					log.debug("이미 처리된 이벤트 스킵 - eventId: {}", eventId);
+					continue;
+				}
 
-			Optional<EventHandled> latestProcessed = eventHandledRepository
-				.findLatestVersion(message.getAggregateId(), CONSUMER_NAME);
+				// 2. Version 체크
+				Long eventVersion = message.getVersion() != null
+					? message.getVersion().longValue()
+					: System.currentTimeMillis() / 1000;
 
-			if (latestProcessed.isPresent() &&
-				latestProcessed.get().getEventVersion() >= eventVersion) {
-				log.warn("구 버전 이벤트 스킵 (Metrics) - eventId: {}, version: {}, latestVersion: {}",
-					eventId, eventVersion, latestProcessed.get().getEventVersion());
-				ack.acknowledge();
-				return;
-			}
+				Optional<EventHandled> latestProcessed = eventHandledRepository
+					.findLatestVersion(message.getAggregateId(), CONSUMER_NAME);
 
-			// 3. 이벤트 타입별 처리
-			switch (message.getEventType()) {
-				case EventTypes.LIKE_ADDED -> handleLikeAdded(message);
-				case EventTypes.LIKE_REMOVED -> handleLikeRemoved(message);
-				case EventTypes.ORDER_CREATED -> handleOrderCreated(message);
-				default -> log.debug("메트릭 처리 대상 아님 - type: {}", message.getEventType());
-			}
+				if (latestProcessed.isPresent() &&
+					latestProcessed.get().getEventVersion() >= eventVersion) {
+					log.debug("구 버전 이벤트 스킵 - eventId: {}", eventId);
+					continue;
+				}
 
-			// 4. 처리 완료 기록 (aggregateId와 version 포함)
-			eventHandledRepository.save(
-				EventHandled.create(
-					eventId,
+				// 3. 이벤트 처리
+				switch (message.getEventType()) {
+					case EventTypes.LIKE_ADDED -> handleLikeAdded(message);
+					case EventTypes.LIKE_REMOVED -> handleLikeRemoved(message);
+					case EventTypes.ORDER_CREATED -> handleOrderCreated(message);
+					default -> log.debug("메트릭 처리 대상 아님 - type: {}", message.getEventType());
+				}
+
+				// 4. 처리 완료 기록
+				eventHandledRepository.save(
+					EventHandled.create(
+						eventId,
+						CONSUMER_NAME,
+						message.getEventType(),
+						message.getAggregateId(),
+						eventVersion
+					)
+				);
+
+				processedCount++;
+
+			} catch (Exception e) {
+				log.error("개별 메시지 처리 실패", e);
+				failedCount++;
+
+				// DLQ로 전송
+				dlqPublisher.sendToDlq(
+					topic,
+					messageJson,
 					CONSUMER_NAME,
-					message.getEventType(),
-					message.getAggregateId(),
-					eventVersion
-				)
-			);
-
-			// 5. ACK
-			ack.acknowledge();
-			log.debug("메트릭 업데이트 완료 - eventId: {}", eventId);
-
-		} catch (Exception e) {
-			log.error("메트릭 처리 실패 - eventId: {}", eventId, e);
-			// ACK 안함 -> 재시도
+					e.getMessage()
+				);
+			}
 		}
+
+		// 5. 배치 전체 ACK
+		ack.acknowledge();
+		log.info("배치 처리 완료 - 처리: {}/{} 건", processedCount, messages.size());
 	}
 
     /**

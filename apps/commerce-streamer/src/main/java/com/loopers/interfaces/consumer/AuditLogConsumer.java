@@ -8,6 +8,7 @@ import com.loopers.domain.event.EventHandled;
 import com.loopers.domain.event.EventHandledRepository;
 import com.loopers.domain.event.EventLog;
 import com.loopers.domain.event.EventLogRepository;
+import com.loopers.interfaces.consumer.support.DlqPublisher;
 import com.loopers.kafka.KafkaTopics;
 import com.loopers.kafka.message.KafkaEventMessage;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class AuditLogConsumer {
     private final EventLogRepository eventLogRepository;
     private final EventHandledRepository eventHandledRepository;
     private final ObjectMapper objectMapper;
+	private final DlqPublisher dlqPublisher;
 
     @KafkaListener(
         topics = {KafkaTopics.CATALOG_EVENTS, KafkaTopics.ORDER_EVENTS},
@@ -110,9 +112,20 @@ public class AuditLogConsumer {
             ack.acknowledge();
             log.debug("이벤트 처리 완료 및 ACK - eventId: {}", eventId);
 
-        } catch (Exception e) {
-            log.error("이벤트 처리 실패 - eventId: {}, error: {}",
-                eventId, e.getMessage(), e);
-        }
+		} catch (Exception e) {
+			log.error("이벤트 처리 실패 - eventId: {}, error: {}",
+				eventId, e.getMessage(), e);
+
+			// DLQ로 전송
+			dlqPublisher.sendToDlq(
+				topic,  // 원본 토픽
+				messageJson,  // 원본 메시지
+				CONSUMER_NAME,  // 실패한 Consumer 이름
+				e.getMessage()  // 에러 메시지
+			);
+
+			// ACK는 하되, DLQ로 보냈음을 표시
+			ack.acknowledge();
+		}
     }
 }

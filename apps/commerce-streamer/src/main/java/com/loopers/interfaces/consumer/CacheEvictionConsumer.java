@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.event.EventHandled;
 import com.loopers.domain.event.EventHandledRepository;
+import com.loopers.interfaces.consumer.support.DlqPublisher;
 import com.loopers.kafka.EventTypes;
 import com.loopers.kafka.KafkaTopics;
 import com.loopers.kafka.message.KafkaEventMessage;
@@ -13,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -32,6 +35,7 @@ public class CacheEvictionConsumer {
     private final EventHandledRepository eventHandledRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+	private final DlqPublisher dlqPublisher;
 
 	@KafkaListener(
 		topics = {KafkaTopics.CATALOG_EVENTS},
@@ -40,6 +44,7 @@ public class CacheEvictionConsumer {
 	)
 	public void consume(
 		String messageJson,
+		@Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
 		Acknowledgment ack
 	) throws JsonProcessingException {
 		// JSON 파싱
@@ -124,6 +129,17 @@ public class CacheEvictionConsumer {
 
 		} catch (Exception e) {
 			log.error("캐시 무효화 실패 - eventId: {}", eventId, e);
+
+			// DLQ로 전송
+			dlqPublisher.sendToDlq(
+				topic,
+				messageJson,
+				CONSUMER_NAME,
+				e.getMessage()
+			);
+
+			// ACK는 하되, DLQ로 보냈음을 표시
+			ack.acknowledge();
 		}
 	}
 
