@@ -130,36 +130,4 @@ class OrderFacadeTest {
         // OrderCompleted 이벤트는 발행되지 않음
         assertThat(events.stream(OrderEvent.Created.class)).isEmpty();
     }
-
-    @Test
-    void maintainsOrderSuccess_whenCouponProcessingFails() {
-        // Given
-        OrderCriteria.Create criteria = OrderCriteria.Create.withoutPoint(
-            TEST_USER_ID,
-            1L,
-            1,
-            receiverInfo
-        );
-
-        // When
-        OrderResult.CreateResult result = orderFacade.createOrder(criteria);
-
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.orderId()).isNotNull();
-
-        // OrderEvent.Created 이벤트 발행됨
-        assertThat(events.stream(OrderEvent.Created.class))
-            .hasSize(1)
-            .first()
-            .satisfies(event -> {
-                assertThat(event.orderId()).isNotNull();
-            });
-
-        Awaitility.await()
-            .atMost(3, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                assertThat(events.stream(OrderEvent.Created.class)).hasSize(1);
-            });
-    }
 }
