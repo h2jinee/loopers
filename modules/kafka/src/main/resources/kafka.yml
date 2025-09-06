@@ -1,0 +1,65 @@
+spring:
+  kafka:
+    bootstrap-servers: ${BOOTSTRAP_SERVERS}
+    client-id: ${spring.application.name}
+    properties:
+      spring.json.add.type.headers: false # json serialize off
+      request.timeout.ms: 20000
+      retry.backoff.ms: 500
+      auto:
+        create.topics.enable: false
+        register.schemas: false
+        offset.reset: latest
+      use.latest.version: true
+
+    # Producer 설정 (commerce-api)
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      retries: 3
+      acks: all  # At Least Once 보장
+      enable-idempotence: true  # 멱등성 보장
+      properties:
+        linger.ms: 10
+        batch.size: 16384
+        buffer.memory: 33554432
+        compression.type: snappy
+        delivery.timeout.ms: 120000
+        max.in.flight.requests.per.connection: 5
+
+    # Consumer 설정 (commerce-streamer)
+    consumer:
+      group-id: loopers-default-consumer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        enable-auto-commit: false
+        max.poll.records: 100
+        max.poll.interval.ms: 300000
+        session.timeout.ms: 30000
+        fetch.min.bytes: 1024  # 최소 1KB 모이면 가져오기
+        fetch.max.wait.ms: 500  # 최대 500ms 대기
+
+    listener:
+      ack-mode: manual
+      type: batch  # 배치 모드 활성화
+      concurrency: 3  # 동시 처리 스레드 수
+
+---
+spring.config.activate.on-profile: local, test
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:19092
+    admin:
+      properties:
+        bootstrap.servers: kafka:9092
+
+---
+spring.config.activate.on-profile: dev
+
+---
+spring.config.activate.on-profile: qa
+
+---
+spring.config.activate.on-profile: prd

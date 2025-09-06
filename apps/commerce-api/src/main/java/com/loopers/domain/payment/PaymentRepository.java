@@ -13,7 +13,7 @@ public interface PaymentRepository {
     
     Optional<Payment> findById(Long id);
     
-    Optional<Payment> findByTransactionId(String transactionId);
+    Optional<Payment> findByTransactionKey(String transactionKey);
     
     List<Payment> findByUserId(String userId);
     

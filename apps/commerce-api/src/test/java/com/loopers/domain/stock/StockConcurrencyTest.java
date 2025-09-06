@@ -1,6 +1,5 @@
 package com.loopers.domain.stock;
 
-import com.loopers.application.stock.StockFacade;
 import com.loopers.domain.common.Money;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.vo.ProductStatus;
@@ -26,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 class StockConcurrencyTest {
 
     @Autowired
-    private StockFacade stockFacade;
+    private StockService stockService;
 
     @Autowired
     private StockJpaRepository stockRepository;
@@ -76,7 +75,7 @@ class StockConcurrencyTest {
         for (int i = 0; i < threadCount; i++) {
             tasks.add(() -> {
                 try {
-                    stockFacade.decreaseStock(productId, decreaseAmount);
+                    stockService.decreaseStock(productId, decreaseAmount);
                 } catch (Exception e) {
                     log.error("withLock 실패: {}", e.getMessage());
                 }

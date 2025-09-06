@@ -5,6 +5,7 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -110,15 +111,19 @@ public class StockService {
      * 재고 차감 (비관적 락 사용)
      */
     @Transactional
-    public void decreaseStock(Long productId, Integer quantity) {
+    public StockChangeInfo decreaseStock(Long productId, Integer quantity) {
         Stock stock = stockRepository.findByProductIdWithLock(productId)
-            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND,
                 "재고 정보를 찾을 수 없습니다. productId: " + productId));
-        
+
+        Integer previousQuantity = stock.getQuantity();  // 이전 재고
         processDecrease(stock, quantity);
         stockRepository.save(stock);
-        
+
         log.info("재고 차감 완료 - productId: {}, quantity: {}", productId, quantity);
+
+        // 변경 정보 반환
+        return new StockChangeInfo(productId, previousQuantity, stock.getQuantity());
     }
     
     
@@ -135,10 +140,10 @@ public class StockService {
     }
     
     /**
-     * 재고 예약 취소 및 재고 복원
+     * 재고 롤백 (예약 취소 + 재고 복원)
      */
-    @Transactional
-    public void cancelReservationsAndRestoreStock(Long orderId) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void rollbackStock(Long orderId) {
         List<StockReservation> reservations = stockReservationRepository.findByOrderId(orderId);
         
         cancelReservations(reservations);
@@ -154,6 +159,6 @@ public class StockService {
             }
         }
         
-        log.info("재고 예약 취소 및 복원 완료 - orderId: {}", orderId);
+        log.info("재고 롤백 완료 - orderId: {}", orderId);
     }
 }

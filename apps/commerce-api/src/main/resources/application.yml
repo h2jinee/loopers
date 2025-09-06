@@ -21,6 +21,7 @@ spring:
     import:
       - jpa.yml
       - redis.yml
+      - kafka.yml
       - logging.yml
       - monitoring.yml
   cloud:
@@ -50,7 +51,7 @@ springdoc:
 
 pg:
   simulator:
-    url: http://localhost:8082
+    url: http://localhost:8085
 
 payment:
   callback:

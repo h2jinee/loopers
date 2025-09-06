@@ -38,9 +38,7 @@ public class OrderDto {
                 
                 String receiverAddressDetail,
                 
-                BigDecimal pointToUse,
-                String cardType,
-                String cardNo
+                BigDecimal pointToUse
             ) {
                 
                 public OrderCriteria.Create toCriteria(String userId) {
@@ -50,24 +48,14 @@ public class OrderDto {
                     );
                     
                     boolean hasPointToUse = pointToUse != null && pointToUse.compareTo(BigDecimal.ZERO) > 0;
-                    boolean hasPgInfo = cardType != null && cardNo != null;
-                    
+
                     if (hasPointToUse) {
                         Money pointMoney = Money.of(pointToUse);
-                        
-                        if (hasPgInfo) {
-                            return OrderCriteria.Create.withPoint(
-                                userId, productId, quantity, receiverInfo, pointMoney
-                            );
-                        } else {
-                            return OrderCriteria.Create.pointOnly(
-                                userId, productId, quantity, receiverInfo, pointMoney
-                            );
-                        }
+
+                        return OrderCriteria.Create.pointOnly(
+                            userId, productId, quantity, receiverInfo, pointMoney
+                        );
                     } else {
-                        if (!hasPgInfo) {
-                            throw new IllegalArgumentException("결제 정보가 필요합니다.");
-                        }
                         return OrderCriteria.Create.withoutPoint(
                             userId, productId, quantity, receiverInfo
                         );

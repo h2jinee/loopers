@@ -1,5 +1,7 @@
 package com.loopers.application.order;
 
+import com.loopers.application.event.EventPublisher;
+import com.loopers.application.event.order.OrderEvent;
 import com.loopers.domain.order.*;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -19,7 +21,7 @@ public class OrderFacade {
     
     private final OrderRepository orderRepository;
     private final OrderProcessor orderProcessor;
-    private final OrderApplicationEventPublisher orderEventPublisher;
+	private final EventPublisher eventPublisher;
     
     /**
      * 주문 생성
@@ -33,9 +35,9 @@ public class OrderFacade {
         OrderCommand.Create orderCommand = criteria.toOrderCommand();
         Order order = orderProcessor.processOrder(orderCommand, criteria.pointToUse());
         
-        // 2. 주문 완료 이벤트 발행 (스냅샷 포함)
-        OrderCompleted event = OrderCompleted.from(order, criteria);
-        orderEventPublisher.publish(event);
+        // 2. 주문 생성 이벤트 발행
+		OrderEvent.Created event = OrderEvent.Created.from(order);
+		eventPublisher.publish(event);
         
         log.info("주문 생성 완료 및 이벤트 발행 - orderId: {}, totalAmount: {}",
             order.getId(), order.getTotalAmount());
@@ -57,16 +59,16 @@ public class OrderFacade {
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
                 "주문을 찾을 수 없습니다. orderId: " + orderId));
-        
-        OrderConfirmed event = OrderConfirmed.from(orderId, order.getUserId());
-        orderEventPublisher.publish(event);
+
+		OrderEvent.Confirmed event = OrderEvent.Confirmed.from(orderId, order.getUserId());
+		eventPublisher.publish(event);
     }
     
     /**
      * 주문 실패 처리
      */
     @Transactional
-    public void failOrder(Long orderId, String reason) {
+    public void cancelOrder(Long orderId, String reason) {
         log.info("주문 실패 처리 - orderId: {}, reason: {}", orderId, reason);
         
         orderProcessor.cancelOrder(orderId);
@@ -75,9 +77,9 @@ public class OrderFacade {
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, 
                 "주문을 찾을 수 없습니다. orderId: " + orderId));
-        
-        OrderCancelled event = OrderCancelled.from(orderId, order.getUserId(), reason);
-        orderEventPublisher.publish(event);
+
+		OrderEvent.Cancelled event = OrderEvent.Cancelled.from(orderId, order.getUserId(), reason);
+		eventPublisher.publish(event);
     }
     
     /**

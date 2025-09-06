@@ -4,14 +4,14 @@ import com.loopers.domain.payment.PaymentStatus;
 
 public record PgPaymentResult(
     PaymentStatus status,
-    String transactionId,
+    String transactionKey,
     String failureReason
 ) {
-    public static PgPaymentResult success(String transactionId) {
-        if (transactionId == null || transactionId.isBlank()) {
+    public static PgPaymentResult success(String transactionKey) {
+        if (transactionKey == null || transactionKey.isBlank()) {
             throw new IllegalArgumentException("거래 ID는 필수입니다.");
         }
-        return new PgPaymentResult(PaymentStatus.COMPLETED, transactionId, null);
+        return new PgPaymentResult(PaymentStatus.COMPLETED, transactionKey, null);
     }
     
     public static PgPaymentResult failure(String reason) {
@@ -21,8 +21,8 @@ public record PgPaymentResult(
         return new PgPaymentResult(PaymentStatus.FAILED, null, reason);
     }
     
-    public static PgPaymentResult pending(String transactionId, String reason) {
-        return new PgPaymentResult(PaymentStatus.PENDING, transactionId, reason);
+    public static PgPaymentResult pending(String transactionKey, String reason) {
+        return new PgPaymentResult(PaymentStatus.PENDING, transactionKey, reason);
     }
     
     public boolean isSuccess() {

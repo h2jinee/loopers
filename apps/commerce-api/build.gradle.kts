@@ -2,6 +2,7 @@ dependencies {
     // add-ons
     implementation(project(":modules:jpa"))
     implementation(project(":modules:redis"))
+    implementation(project(":modules:kafka"))
     implementation(project(":supports:jackson"))
     implementation(project(":supports:logging"))
     implementation(project(":supports:monitoring"))
@@ -30,6 +31,9 @@ dependencies {
     
     // configuration processor for IDE support
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
+    // Awaitility
+    testImplementation("org.awaitility:awaitility")
     
     // test-fixtures
     testImplementation(testFixtures(project(":modules:jpa")))
