@@ -2,7 +2,6 @@ package com.loopers.interfaces.api.order;
 
 import com.loopers.application.order.OrderCriteria;
 import com.loopers.application.order.OrderResult;
-import com.loopers.domain.common.Money;
 import com.loopers.domain.order.vo.OrderStatus;
 import com.loopers.domain.order.vo.ReceiverInfo;
 import jakarta.validation.constraints.*;
@@ -36,9 +35,7 @@ public class OrderDto {
                 @NotBlank(message = "주소는 필수입니다.")
                 String receiverAddress,
                 
-                String receiverAddressDetail,
-                
-                BigDecimal pointToUse
+                String receiverAddressDetail
             ) {
                 
                 public OrderCriteria.Create toCriteria(String userId) {
@@ -47,19 +44,9 @@ public class OrderDto {
                         receiverAddress, receiverAddressDetail
                     );
                     
-                    boolean hasPointToUse = pointToUse != null && pointToUse.compareTo(BigDecimal.ZERO) > 0;
-
-                    if (hasPointToUse) {
-                        Money pointMoney = Money.of(pointToUse);
-
-                        return OrderCriteria.Create.pointOnly(
-                            userId, productId, quantity, receiverInfo, pointMoney
-                        );
-                    } else {
-                        return OrderCriteria.Create.withoutPoint(
-                            userId, productId, quantity, receiverInfo
-                        );
-                    }
+                    return new OrderCriteria.Create(
+                        userId, productId, quantity, receiverInfo
+                    );
                 }
             }
             
