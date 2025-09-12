@@ -24,7 +24,7 @@ public class EventHandledRepositoryImpl implements EventHandledRepository {
     }
 
 	@Override
-	public Optional<EventHandled> findLatestVersion(String aggregateId, String consumerName) {
-		return jpaRepository.findLatestVersion(aggregateId, consumerName);
-	}
+    public Optional<EventHandled> findLatestVersion(String aggregateId, String eventType, String consumerName) {
+        return jpaRepository.findLatestVersion(aggregateId, eventType, consumerName);
+    }
 }

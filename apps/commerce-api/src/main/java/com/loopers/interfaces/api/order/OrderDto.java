@@ -2,6 +2,7 @@ package com.loopers.interfaces.api.order;
 
 import com.loopers.application.order.OrderCriteria;
 import com.loopers.application.order.OrderResult;
+import com.loopers.domain.common.Money;
 import com.loopers.domain.order.vo.OrderStatus;
 import com.loopers.domain.order.vo.ReceiverInfo;
 import jakarta.validation.constraints.*;
@@ -9,7 +10,6 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class OrderDto {
     public static class V1 {
@@ -35,7 +35,10 @@ public class OrderDto {
                 @NotBlank(message = "주소는 필수입니다.")
                 String receiverAddress,
                 
-                String receiverAddressDetail
+                String receiverAddressDetail,
+
+                @NotBlank(message = "포인트 사용 금액은 필수입니다.")
+                BigDecimal pointAmount
             ) {
                 
                 public OrderCriteria.Create toCriteria(String userId) {
@@ -43,10 +46,17 @@ public class OrderDto {
                         receiverName, receiverPhone, receiverZipCode, 
                         receiverAddress, receiverAddressDetail
                     );
-                    
-                    return new OrderCriteria.Create(
-                        userId, productId, quantity, receiverInfo
-                    );
+
+                    if (pointAmount != null && pointAmount.compareTo(BigDecimal.ZERO) > 0) {
+                        return OrderCriteria.Create.pointOnly(
+                            userId, productId, quantity, receiverInfo,
+                            Money.of(pointAmount)
+                        );
+                    } else {
+                        return OrderCriteria.Create.withoutPoint(
+                            userId, productId, quantity, receiverInfo
+                        );
+                    }
                 }
             }
             
@@ -81,7 +91,7 @@ public class OrderDto {
                 public static Response from(OrderResult.Detail detail) {
                     List<OrderLineResponse> lines = detail.orderLines().stream()
                         .map(OrderLineResponse::from)
-                        .collect(Collectors.toList());
+                        .toList();
                         
                     return new Response(
                         detail.orderId(),
