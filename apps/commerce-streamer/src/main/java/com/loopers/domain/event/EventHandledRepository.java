@@ -7,5 +7,5 @@ public interface EventHandledRepository {
 
     boolean existsByEventIdAndConsumerName(String eventId, String consumerName);
 
-	Optional<EventHandled> findLatestVersion(String aggregateId, String consumerName);
+	Optional<EventHandled> findLatestVersion(String aggregateId, String eventType, String consumerName);
 }
