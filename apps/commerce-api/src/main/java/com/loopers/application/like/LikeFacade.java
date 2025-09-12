@@ -6,7 +6,7 @@ import com.loopers.domain.like.Like;
 import com.loopers.domain.like.LikeCommand;
 import com.loopers.domain.like.LikeInfo;
 import com.loopers.domain.like.LikeService;
-import com.loopers.domain.product.Product;
+import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductCountService;
 import com.loopers.domain.brand.BrandInfo;
@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -112,65 +111,62 @@ public class LikeFacade {
      */
     public Page<LikeResult.LikedProduct> getLikedProducts(LikeCriteria.GetLikedProducts criteria) {
         PageRequest pageRequest = PageRequest.of(criteria.page(), criteria.size());
-        
-        // 1. Like 엔티티만 조회 (도메인 경계 유지)
+
+        // 1. Like 엔티티만 조회
         Page<Like> likes = likeService.getUserLikes(criteria.userId(), pageRequest);
-        
+
         if (likes.isEmpty()) {
             return Page.empty(pageRequest);
         }
-        
+
         // 2. 상품 ID 추출
         List<Long> productIds = likes.stream()
             .map(Like::getProductId)
-            .collect(Collectors.toList());
-        
-        // 3. 상품 정보 일괄 조회 (N+1 방지)
-        List<Product> products = productService.getProductsByIds(productIds);
-        Map<Long, Product> productMap = products.stream()
-            .collect(Collectors.toMap(Product::getId, p -> p));
-        
-        // 4. 브랜드 ID 추출 및 브랜드 정보 일괄 조회
-        List<Long> brandIds = products.stream()
-            .map(Product::getBrandId)
+            .toList();
+
+        // 3. 상품 정보 일괄 조회
+        Map<Long, ProductInfo> productMap = productService.getProductsByIds(productIds);
+
+        // 4. 브랜드 ID 추출
+        List<Long> brandIds = productMap.values().stream()
+            .map(ProductInfo::brandId)
             .distinct()
-            .collect(Collectors.toList());
-        
+            .toList();
+
         Map<Long, BrandInfo> brandMap = brandService.getBrandsByIds(brandIds);
-        
+
         // 5. 조합하여 Result 생성
         List<LikeResult.LikedProduct> likedProducts = likes.stream()
             .map(like -> {
-                Product product = productMap.get(like.getProductId());
-                if (product == null) {
+                ProductInfo productInfo = productMap.get(like.getProductId());
+                if (productInfo == null) {
                     log.warn("좋아요한 상품을 찾을 수 없음 - productId: {}", like.getProductId());
                     return null;
                 }
-                
-                BrandInfo brand = brandMap.get(product.getBrandId());
+
+                BrandInfo brand = brandMap.get(productInfo.brandId());
                 if (brand == null) {
-                    log.warn("브랜드를 찾을 수 없음 - brandId: {}", product.getBrandId());
+                    log.warn("브랜드를 찾을 수 없음 - brandId: {}", productInfo.brandId());
                     return null;
                 }
-                
-                // LikeInfo.LikedProduct 생성 후 LikeResult.LikedProduct로 변환
+
                 LikeInfo.LikedProduct likeInfo = LikeInfo.LikedProduct.of(
-                    product.getId(),
+                    productInfo.productId(),
                     brand.brandId(),
                     brand.nameKo(),
-                    product.getNameKo(),
-                    product.getDescription(),
-                    product.getPrice().amount(),
-                    product.getLikeCount(),
-                    product.getStatus(),
+                    productInfo.nameKo(),
+                    productInfo.description(),
+                    productInfo.price().amount(),
+                    productInfo.likeCount(),
+                    productInfo.status(),
                     like.getCreatedAt()
                 );
-                
+
                 return LikeResult.LikedProduct.from(likeInfo);
             })
             .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-        
+            .toList();
+
         return new PageImpl<>(likedProducts, pageRequest, likes.getTotalElements());
     }
 }

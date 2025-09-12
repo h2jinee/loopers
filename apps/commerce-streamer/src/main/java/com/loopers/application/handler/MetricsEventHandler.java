@@ -32,7 +32,6 @@ public class MetricsEventHandler {
         var eventType = message.getEventType();
         var aggregateId = message.getAggregateId();
         var eventVersion = Optional.ofNullable(message.getVersion())
-            .map(Number::longValue)
             .orElse(0L);  // 버전 없으면 0 (가장 오래된 것으로 처리)
 
         // 처리 가능 체크

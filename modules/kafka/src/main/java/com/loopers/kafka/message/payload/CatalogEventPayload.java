@@ -65,4 +65,16 @@ public class CatalogEventPayload {
         private String changeReason;  // ORDERED, CANCELLED, ADJUSTED
         private LocalDateTime changedAt;
     }
+
+    /**
+     * 상품 조회 이벤트 페이로드
+     */
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ProductViewed {
+        private Long productId;
+        private LocalDateTime viewedAt;
+    }
 }

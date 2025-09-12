@@ -34,7 +34,9 @@ public class AuditLogEventHandler {
         var eventId = message.getEventId();
         var eventType = message.getEventType();
         var aggregateId = message.getAggregateId();
-        var eventVersion = message.getVersion() != null ? message.getVersion().longValue(): 0L;
+        var eventVersion = message.getVersion() != null
+            ? message.getVersion()
+            : 0L;
 
         // 1. 처리 가능 체크
         if (!eventProcessingService.canProcessEvent(eventId, eventType, aggregateId, CONSUMER_NAME, eventVersion)) {

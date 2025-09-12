@@ -23,9 +23,10 @@ public class ProductResult {
             ProductStatus status,
             Integer releaseYear,
             Long likeCount,
-            boolean isAvailable
+            boolean isAvailable,
+            Long rank
         ) {
-            public static ProductDetail from(ProductInfo info) {
+            public static ProductDetail from(ProductInfo info, Long rank) {
                 return new ProductDetail(
                     info.productId(),
                     info.nameKo(),
@@ -36,7 +37,8 @@ public class ProductResult {
                     info.status(),
                     info.releaseYear(),
                     info.likeCount(),
-                    info.isAvailable()
+                    info.isAvailable(),
+                    rank
                 );
             }
         }
@@ -65,9 +67,9 @@ public class ProductResult {
             }
         }
         
-        public static Detail from(ProductInfo productInfo, BrandInfo brandInfo, StockInfo stockInfo) {
+        public static Detail from(ProductInfo productInfo, BrandInfo brandInfo, StockInfo stockInfo, Long rank) {
             return new Detail(
-                ProductDetail.from(productInfo),
+                ProductDetail.from(productInfo, rank),
                 BrandDetail.from(brandInfo),
                 StockDetail.from(stockInfo)
             );
@@ -88,7 +90,8 @@ public class ProductResult {
                 ProductStatus.OUT_OF_STOCK,
                 0,
                 0L,
-                false
+                false,
+                null
             );
             
             BrandDetail fallbackBrand = new BrandDetail(

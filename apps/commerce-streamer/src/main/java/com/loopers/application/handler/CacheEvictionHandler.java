@@ -2,7 +2,6 @@ package com.loopers.application.handler;
 
 import com.loopers.application.service.CacheEvictionService;
 import com.loopers.application.service.EventProcessingService;
-import com.loopers.kafka.EventTypes;
 import com.loopers.kafka.message.KafkaEventMessage;
 import com.loopers.kafka.message.payload.CatalogEventPayload;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +30,11 @@ public class CacheEvictionHandler {
         var eventType = message.getEventType();
         var aggregateId = message.getAggregateId();
         var eventVersion = message.getVersion() != null
-            ? message.getVersion().longValue()
+            ? message.getVersion()
             : 0L;
 
         // 1. 캐시 무효화가 필요한 이벤트인지 체크
-        if (!shouldEvictCache(eventType)) {
+        if (!shouldEvictCache(message)) {
             log.debug("캐시 무효화 대상 아님 - type: {}", eventType);
             return false;
         }
@@ -59,13 +58,11 @@ public class CacheEvictionHandler {
         return cacheEvicted;
     }
 
-    private boolean shouldEvictCache(String eventType) {
-        return switch (eventType) {
-            case EventTypes.LIKE_ADDED,
-                 EventTypes.LIKE_REMOVED,
-                 EventTypes.STOCK_CHANGED -> true;
-            default -> false;
-        };
+    private boolean shouldEvictCache(KafkaEventMessage<?> message) {
+        var payload = message.getPayload();
+        return payload instanceof CatalogEventPayload.LikeAdded ||
+            payload instanceof CatalogEventPayload.LikeRemoved ||
+            payload instanceof CatalogEventPayload.StockChanged;
     }
 
     private boolean evictCacheByEventType(KafkaEventMessage<?> message) {
