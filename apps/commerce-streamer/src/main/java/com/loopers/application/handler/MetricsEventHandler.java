@@ -60,11 +60,11 @@ public class MetricsEventHandler {
         var payload = message.getPayload();
 
         switch (payload) {
-            case CatalogEventPayload.LikeAdded likeAdded ->
-                metricsService.incrementLikeCount(likeAdded.getProductId());
-
-            case CatalogEventPayload.LikeRemoved likeRemoved ->
-                metricsService.decrementLikeCount(likeRemoved.getProductId());
+            case CatalogEventPayload.LikeChanged likeChanged ->
+                metricsService.setLikeCount(
+                    likeChanged.getProductId(),
+                    likeChanged.getTotalLikeCount()
+                );
 
             case OrderEventPayload.OrderCreated orderCreated when
                 orderCreated.getOrderItems() != null && !orderCreated.getOrderItems().isEmpty() -> {

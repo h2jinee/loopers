@@ -17,31 +17,17 @@ public class MetricsService {
     private final ProductMetricsRepository productMetricsRepository;
 
     /**
-     * 좋아요 추가 메트릭 집계
+     * 좋아요 카운트 절대값 설정
      */
     @Transactional
-    public void incrementLikeCount(Long productId) {
+    public void setLikeCount(Long productId, Long totalLikeCount) {
         ProductMetrics metrics = findOrCreateMetrics(productId);
 
-        metrics.addLike();
+        // 절대값 설정
+        metrics.setLikeCount(totalLikeCount);
         productMetricsRepository.save(metrics);
 
-        log.info("좋아요 메트릭 증가 - productId: {}, likeCount: {}",
-            productId, metrics.getLikeCount());
-    }
-
-    /**
-     * 좋아요 제거 메트릭 집계
-     */
-    @Transactional
-    public void decrementLikeCount(Long productId) {
-        ProductMetrics metrics = findOrCreateMetrics(productId);
-
-        metrics.removeLike();
-        productMetricsRepository.save(metrics);
-
-        log.info("좋아요 메트릭 감소 - productId: {}, likeCount: {}",
-            productId, metrics.getLikeCount());
+        log.info("좋아요 메트릭 절대값 설정 - productId: {}, totalLikeCount: {}", productId, totalLikeCount);
     }
 
     /**

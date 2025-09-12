@@ -39,6 +39,19 @@ public class CatalogEventPayload {
     }
 
     /**
+     * 좋아요 변경 이벤트 페이로드
+     */
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LikeChanged {
+        private Long productId;
+        private Long totalLikeCount;  // 현재 총 좋아요 수 (절대값)
+        private LocalDateTime changedAt;
+    }
+
+    /**
      * 재고 변경 이벤트 페이로드
      */
     @Getter

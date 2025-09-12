@@ -18,13 +18,6 @@ public class CacheEvictionService {
     private final RedisTemplate<String, String> redisTemplate;
 
     /**
-     * 캐시 생성 시 키를 SET에 추가
-     */
-    public void registerCacheKey(String key) {
-        redisTemplate.opsForSet().add(CACHE_KEYS_SET, key);
-    }
-
-    /**
      * 상품 상세 캐시 삭제
      */
     public void evictProductDetailCache(Long productId) {
