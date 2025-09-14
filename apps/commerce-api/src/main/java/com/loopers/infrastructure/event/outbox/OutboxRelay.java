@@ -102,9 +102,9 @@ public class OutboxRelay {
 				.eventType(outbox.getEventType())
 				.aggregateId(outbox.getAggregateId())
 				.timestamp(LocalDateTime.now())
-				.version(outbox.getEventVersion() != null
-					? outbox.getEventVersion().intValue()
-					: 1)
+                .version(outbox.getEventVersion() != null
+                    ? outbox.getEventVersion()
+                    : 1L)
 				.payload(payload)
 				.build();
 

@@ -54,15 +54,14 @@ public class ProductMetrics {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // 비즈니스 메서드
-    public void addLike() {
-        this.likeCount++;
-    }
-
-    public void removeLike() {
-        if (this.likeCount > 0) {
-            this.likeCount--;
+    /**
+     * 좋아요 카운트를 절대값으로 설정
+     */
+    public void setLikeCount(Long count) {
+        if (count == null || count < 0) {
+            throw new IllegalArgumentException("좋아요 수는 0 이상이어야 합니다: " + count);
         }
+        this.likeCount = count;
     }
 
     public void addOrder(Long quantity) {

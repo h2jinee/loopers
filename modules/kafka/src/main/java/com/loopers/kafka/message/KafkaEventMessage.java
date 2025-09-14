@@ -19,14 +19,14 @@ public class KafkaEventMessage<T> {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime timestamp;
 
-    private Integer version;
+    private Long version;
     private T payload;
 
     public static <T> KafkaEventMessage<T> of(String eventType, String aggregateId, T payload) {
         return KafkaEventMessage.<T>builder()
             .eventId(UUID.randomUUID().toString())
             .timestamp(LocalDateTime.now())
-            .version(1)
+            .version(1L)
             .eventType(eventType)
             .aggregateId(aggregateId)
             .payload(payload)

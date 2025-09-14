@@ -6,8 +6,6 @@ import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.stock.StockInfo;
 import com.loopers.domain.stock.StockService;
-import com.loopers.domain.point.PointService;
-import com.loopers.domain.common.Money;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -22,14 +20,13 @@ public class OrderProcessor {
     
     private final OrderService orderService;
     private final ProductService productService;
-    private final PointService pointService;
     private final StockService stockService;
 
     /**
      * 주문 생성
      */
     @Transactional
-    public Order processOrder(OrderCommand.Create command, Money pointToUse) {
+    public Order processOrder(OrderCommand.Create command) {
         // 1. 상품 정보 조회
         ProductCommand.GetOne getProductCommand = new ProductCommand.GetOne(command.productId());
         ProductInfo product = productService.getProduct(getProductCommand);
@@ -40,17 +37,12 @@ public class OrderProcessor {
             throw new CoreException(ErrorType.CONFLICT, "재고가 부족합니다.");
         }
 
-        // 3. 포인트 검증
-        if (pointToUse != null && !pointToUse.isZero()) {
-            pointService.validateAvailablePoints(command.userId(), pointToUse);
-        }
-
-        // 4. 주문 생성
+        // 3. 주문 생성
         OrderCommand.CreateWithProduct createCommand =
             OrderCommand.CreateWithProduct.from(command, product);
         Order order = orderService.createOrder(createCommand);
 
-        log.info("주문서(재고 / 포인트 검증 포함) 생성 완료 - orderId: {}", order.getId());
+        log.info("주문서 생성 완료 - orderId: {}", order.getId());
         return order;
     }
     

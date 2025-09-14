@@ -81,7 +81,8 @@ public class ProductDto {
                     ProductStatus status,
                     Integer releaseYear,
                     Long likeCount,
-                    boolean isAvailable
+                    boolean isAvailable,
+                    Long rank
                 ) {}
                 
                 public record BrandInfo(
@@ -106,7 +107,8 @@ public class ProductDto {
                             detail.product().status(),
                             detail.product().releaseYear(),
                             detail.product().likeCount(),
-                            detail.product().isAvailable()
+                            detail.product().isAvailable(),
+                            detail.product().rank()
                         ),
                         new BrandInfo(
                             detail.brand().brandId(),

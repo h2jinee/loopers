@@ -77,19 +77,4 @@ public class PointService {
         log.info("포인트 환불 완료 - userId: {}, amount: {}, orderId: {}", 
             userId, amount, orderId);
     }
-
-    /**
-     * 포인트 사용 가능 여부 검증
-     */
-    public void validateAvailablePoints(String userId, Money amount) {
-        Point point = pointRepository.findByUserId(userId)
-            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND,
-                "포인트 정보를 찾을 수 없습니다. userId: " + userId));
-
-        if (!point.canPay(amount)) {
-            throw new CoreException(ErrorType.BAD_REQUEST,
-                String.format("포인트가 부족합니다. 필요: %s, 현재: %s",
-                    amount, point.getBalance()));
-        }
-    }
 }

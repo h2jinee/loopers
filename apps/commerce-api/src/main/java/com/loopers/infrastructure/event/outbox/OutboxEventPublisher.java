@@ -58,6 +58,7 @@ public class OutboxEventPublisher implements EventPublisher {
         if (eventType.contains("Like") ||
             eventType.equals("Added") ||
             eventType.equals("Removed") ||
+            eventType.equals("CountChanged") ||
             eventType.contains("Stock") ||
             eventType.equals("Changed")) {
             return KafkaTopics.CATALOG_EVENTS;

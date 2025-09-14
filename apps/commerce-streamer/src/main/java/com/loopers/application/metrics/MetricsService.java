@@ -1,0 +1,58 @@
+package com.loopers.application.metrics;
+
+import com.loopers.domain.metrics.ProductMetrics;
+import com.loopers.domain.metrics.ProductMetricsRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class MetricsService {
+
+    private final ProductMetricsRepository productMetricsRepository;
+
+    /**
+     * 좋아요 카운트 절대값 설정
+     */
+    @Transactional
+    public void setLikeCount(Long productId, Long totalLikeCount) {
+        ProductMetrics metrics = findOrCreateMetrics(productId);
+
+        // 절대값 설정
+        metrics.setLikeCount(totalLikeCount);
+        productMetricsRepository.save(metrics);
+
+        log.info("좋아요 메트릭 절대값 설정 - productId: {}, totalLikeCount: {}", productId, totalLikeCount);
+    }
+
+    /**
+     * 주문 메트릭 집계
+     */
+    @Transactional
+    public void aggregateOrderMetrics(Long productId, Long quantity) {
+        ProductMetrics metrics = findOrCreateMetrics(productId);
+
+        metrics.addOrder(quantity);
+        productMetricsRepository.save(metrics);
+
+        log.info("주문 메트릭 업데이트 - productId: {}, orderCount: {}, salesQty: {}",
+            productId, metrics.getOrderCount(), metrics.getSalesQuantity());
+    }
+
+    private ProductMetrics findOrCreateMetrics(Long productId) {
+        return productMetricsRepository
+            .findByProductIdAndMetricDate(productId, LocalDate.now())
+            .orElse(ProductMetrics.builder()
+                .productId(productId)
+                .metricDate(LocalDate.now())
+                .likeCount(0L)
+                .orderCount(0L)
+                .salesQuantity(0L)
+                .build());
+    }
+}

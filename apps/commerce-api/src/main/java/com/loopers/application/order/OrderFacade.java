@@ -31,9 +31,9 @@ public class OrderFacade {
         log.info("순수 주문 생성 시작 - userId: {}, productId: {}", 
             criteria.userId(), criteria.productId());
         
-        // 1. 주문 생성 (메인 로직: 재고/포인트 검증 포함)
+        // 1. 주문 생성
         OrderCommand.Create orderCommand = criteria.toOrderCommand();
-        Order order = orderProcessor.processOrder(orderCommand, criteria.pointToUse());
+        Order order = orderProcessor.processOrder(orderCommand);
         
         // 2. 주문 생성 이벤트 발행
 		OrderEvent.Created event = OrderEvent.Created.from(order);

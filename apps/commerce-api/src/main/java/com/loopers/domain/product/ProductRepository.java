@@ -20,6 +20,4 @@ public interface ProductRepository {
     void incrementLikeCount(Long productId);
     
     void decrementLikeCount(Long productId);
-    
-    boolean existsById(Long id);
 }

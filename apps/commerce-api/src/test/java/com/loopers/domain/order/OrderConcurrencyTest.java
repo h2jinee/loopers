@@ -40,7 +40,6 @@ class OrderConcurrencyTest {
     void setUp() {
         userId = "test-user-" + System.currentTimeMillis();
         
-        int initialStock = 50;
         int initialPoint = 50000;
         
         // 테스트용 상품 ID
@@ -54,12 +53,10 @@ class OrderConcurrencyTest {
     @Test
     @DisplayName("동일 유저 - 50개 스레드가 동시에 주문 생성 시 정상 처리")
     void concurrentOrderBySameUser() throws InterruptedException {
-        int initialStock = 50;
         int initialPoint = 50000;
         int threadCount = 50;
         int orderQuantity = 1;
-        int productPrice = 1000;
-        
+
         List<Runnable> tasks = new ArrayList<>();
         java.util.concurrent.atomic.AtomicInteger successCount = new java.util.concurrent.atomic.AtomicInteger(0);
         java.util.concurrent.atomic.AtomicInteger failCount = new java.util.concurrent.atomic.AtomicInteger(0);
@@ -69,7 +66,8 @@ class OrderConcurrencyTest {
             tasks.add(() -> {
                 try {
                     ReceiverInfo receiverInfo = new ReceiverInfo("테스트", "010-1234-5678", "12345", "서울시", "상세주소");
-                    OrderCriteria.Create criteria = new OrderCriteria.Create(userId, productId, orderQuantity, receiverInfo, null, null);
+                    // withoutPoint이므로 포인트 사용 안 함
+                    OrderCriteria.Create criteria = OrderCriteria.Create.withoutPoint(userId, productId, orderQuantity, receiverInfo);
                     orderFacade.createOrder(criteria);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
@@ -83,15 +81,14 @@ class OrderConcurrencyTest {
 
         // 결과 확인
         log.info("성공: {}, 실패: {}", successCount.get(), failCount.get());
-        
-        // 재고 확인 (모든 주문이 성공했다면 재고는 0이어야 함)
-        // 포인트 확인 (사용된 포인트 = 성공한 주문 수 * 1000)
+
+        // 포인트 확인 - withoutPoint 사용했으므로 포인트 그대로
         var point = pointRepository.findByUserId(userId).orElse(null);
         assertThat(point).isNotNull();
-        
-        int expectedRemainingPoint = initialPoint - (successCount.get() * productPrice);
-        assertThat(point.getBalance().amount().intValue()).isEqualTo(expectedRemainingPoint);
-        
+
+        // 포인트를 사용하지 않았으므로 초기값 그대로여야 함
+        assertThat(point.getBalance().amount().intValue()).isEqualTo(initialPoint);
+
         log.info("남은 포인트: {}", point.getBalance().amount().intValue());
     }
 
@@ -123,7 +120,7 @@ class OrderConcurrencyTest {
                 tasks.add(() -> {
                     try {
                         ReceiverInfo receiverInfo = new ReceiverInfo("테스트", "010-1234-5678", "12345", "서울시", "상세주소");
-                        OrderCriteria.Create criteria = new OrderCriteria.Create(testUserId, productId, orderQuantity, receiverInfo, null, null);
+                        OrderCriteria.Create criteria = OrderCriteria.Create.withoutPoint(userId, productId, orderQuantity, receiverInfo);
                         orderFacade.createOrder(criteria);
                     } catch (Exception e) {
                         log.debug("주문 실패 - userId: {}, error: {}", testUserId, e.getMessage());

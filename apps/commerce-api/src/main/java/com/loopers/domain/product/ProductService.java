@@ -2,6 +2,8 @@ package com.loopers.domain.product;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -38,9 +40,13 @@ public class ProductService {
         
         return products.map(ProductInfo::from);
     }
-    
-    public List<Product> getProductsByIds(List<Long> productIds) {
-        return productRepository.findByIdIn(productIds);
+
+    public Map<Long, ProductInfo> getProductsByIds(List<Long> productIds) {
+        return productRepository.findByIdIn(productIds).stream()
+            .collect(Collectors.toMap(
+                Product::getId,
+                ProductInfo::from
+            ));
     }
     
     private Pageable createPageable(ProductCommand.GetList command) {

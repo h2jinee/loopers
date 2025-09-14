@@ -10,7 +10,6 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class OrderDto {
     public static class V1 {
@@ -37,8 +36,9 @@ public class OrderDto {
                 String receiverAddress,
                 
                 String receiverAddressDetail,
-                
-                BigDecimal pointToUse
+
+                @NotBlank(message = "포인트 사용 금액은 필수입니다.")
+                BigDecimal pointAmount
             ) {
                 
                 public OrderCriteria.Create toCriteria(String userId) {
@@ -46,14 +46,11 @@ public class OrderDto {
                         receiverName, receiverPhone, receiverZipCode, 
                         receiverAddress, receiverAddressDetail
                     );
-                    
-                    boolean hasPointToUse = pointToUse != null && pointToUse.compareTo(BigDecimal.ZERO) > 0;
 
-                    if (hasPointToUse) {
-                        Money pointMoney = Money.of(pointToUse);
-
+                    if (pointAmount != null && pointAmount.compareTo(BigDecimal.ZERO) > 0) {
                         return OrderCriteria.Create.pointOnly(
-                            userId, productId, quantity, receiverInfo, pointMoney
+                            userId, productId, quantity, receiverInfo,
+                            Money.of(pointAmount)
                         );
                     } else {
                         return OrderCriteria.Create.withoutPoint(
@@ -94,7 +91,7 @@ public class OrderDto {
                 public static Response from(OrderResult.Detail detail) {
                     List<OrderLineResponse> lines = detail.orderLines().stream()
                         .map(OrderLineResponse::from)
-                        .collect(Collectors.toList());
+                        .toList();
                         
                     return new Response(
                         detail.orderId(),

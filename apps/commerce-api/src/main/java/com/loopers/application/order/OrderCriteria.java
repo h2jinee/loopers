@@ -3,52 +3,42 @@ package com.loopers.application.order;
 import com.loopers.domain.common.Money;
 import com.loopers.domain.order.OrderCommand;
 import com.loopers.domain.order.vo.ReceiverInfo;
-import com.loopers.domain.payment.PaymentMethod;
 
 public class OrderCriteria {
-    
+
     public record Create(
         String userId,
         Long productId,
         Integer quantity,
         ReceiverInfo receiverInfo,
-        Money pointToUse,  // 사용할 포인트 (null 또는 0이면 미사용)
-        PaymentMethod paymentMethod  // 결제 방법 (POINT, PG, COMBINED)
+        Money pointAmount
     ) {
-        public OrderCommand.Create toOrderCommand() {
-            return new OrderCommand.Create(userId, productId, quantity, receiverInfo);
-        }
-
+        // 포인트 없이 주문 (일반 결제)
         public static Create withoutPoint(
             String userId,
             Long productId,
             Integer quantity,
             ReceiverInfo receiverInfo
         ) {
-            return new Create(userId, productId, quantity, receiverInfo, null, PaymentMethod.PG);
+            return new Create(userId, productId, quantity, receiverInfo, null);
         }
-        
-        public static Create withPoint(
-            String userId,
-            Long productId,
-            Integer quantity,
-            ReceiverInfo receiverInfo,
-            Money pointToUse
-        ) {
-            return new Create(userId, productId, quantity, receiverInfo, pointToUse, PaymentMethod.COMBINED);
-        }
-        
+
+        // 포인트만으로 결제
         public static Create pointOnly(
             String userId,
             Long productId,
             Integer quantity,
             ReceiverInfo receiverInfo,
-            Money pointToUse
+            Money pointAmount
         ) {
-            return new Create(userId, productId, quantity, receiverInfo, pointToUse, PaymentMethod.POINT);
+            return new Create(userId, productId, quantity, receiverInfo, pointAmount);
+        }
+
+        public OrderCommand.Create toOrderCommand() {
+            return new OrderCommand.Create(userId, productId, quantity, receiverInfo);
         }
     }
-    
+
     public record GetDetail(
         String userId,
         Long orderId
@@ -57,7 +47,7 @@ public class OrderCriteria {
             return new OrderCommand.GetDetail(userId, orderId);
         }
     }
-    
+
     public record GetList(
         String userId,
         Integer page,

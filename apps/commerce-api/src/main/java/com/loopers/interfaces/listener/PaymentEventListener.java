@@ -2,8 +2,6 @@ package com.loopers.interfaces.listener;
 
 import com.loopers.application.event.payment.PaymentEvent;
 import com.loopers.application.order.OrderFacade;
-import com.loopers.domain.common.Money;
-import com.loopers.domain.point.PointService;
 import com.loopers.domain.stock.StockService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +12,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * 결제 이벤트 처리 리스너
- * 결제 도메인 이벤트를 받아 필요한 후속 처리 수행
  */
 @Slf4j
 @Component
