@@ -1,4 +1,4 @@
-package com.loopers.application.service;
+package com.loopers.application.support.event;
 
 import com.loopers.domain.event.EventHandled;
 import com.loopers.domain.event.EventHandledRepository;

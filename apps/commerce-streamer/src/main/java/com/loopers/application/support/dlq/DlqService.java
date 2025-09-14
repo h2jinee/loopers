@@ -1,4 +1,4 @@
-package com.loopers.application.service;
+package com.loopers.application.support.dlq;
 
 import com.loopers.domain.event.DeadLetterKafkaEvent;
 import com.loopers.domain.event.DeadLetterKafkaEventRepository;

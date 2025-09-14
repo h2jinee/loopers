@@ -1,6 +1,6 @@
 package com.loopers.interfaces.consumer;
 
-import com.loopers.application.handler.AuditLogEventHandler;
+import com.loopers.application.support.audit.AuditLogEventHandler;
 import com.loopers.interfaces.consumer.support.DlqPublisher;
 import com.loopers.kafka.KafkaTopics;
 import com.loopers.kafka.message.KafkaEventMessage;

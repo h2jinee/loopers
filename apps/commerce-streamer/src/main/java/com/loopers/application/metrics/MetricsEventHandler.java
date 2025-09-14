@@ -1,7 +1,6 @@
-package com.loopers.application.handler;
+package com.loopers.application.metrics;
 
-import com.loopers.application.service.EventProcessingService;
-import com.loopers.application.service.MetricsService;
+import com.loopers.application.support.event.EventProcessingService;
 import com.loopers.kafka.message.KafkaEventMessage;
 import com.loopers.kafka.message.payload.CatalogEventPayload;
 import com.loopers.kafka.message.payload.OrderEventPayload;

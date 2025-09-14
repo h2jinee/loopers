@@ -8,6 +8,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.loopers.application.ranking.RankingScoreCalculator;
+
 class RankingScoreCalculatorTest {
 
     private RankingScoreCalculator calculator;

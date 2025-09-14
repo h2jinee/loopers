@@ -1,10 +1,9 @@
-package com.loopers.application.handler;
+package com.loopers.application.support.audit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopers.application.service.AuditLogService;
-import com.loopers.application.service.EventProcessingService;
-import com.loopers.application.service.dto.EventLogRequest;
+import com.loopers.application.support.event.EventProcessingService;
+import com.loopers.application.support.event.dto.EventLogRequest;
 import com.loopers.kafka.message.KafkaEventMessage;
 import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;

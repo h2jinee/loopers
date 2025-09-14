@@ -1,4 +1,4 @@
-package com.loopers.application.service;
+package com.loopers.application.metrics;
 
 import com.loopers.domain.metrics.ProductMetrics;
 import com.loopers.domain.metrics.ProductMetricsRepository;

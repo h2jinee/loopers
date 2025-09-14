@@ -1,6 +1,6 @@
 package com.loopers.interfaces.consumer;
 
-import com.loopers.application.handler.MetricsEventHandler;
+import com.loopers.application.metrics.MetricsEventHandler;
 import com.loopers.interfaces.consumer.support.DlqPublisher;
 import com.loopers.kafka.KafkaTopics;
 import com.loopers.kafka.message.KafkaEventMessage;

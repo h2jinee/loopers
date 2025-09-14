@@ -1,7 +1,6 @@
-package com.loopers.application.handler;
+package com.loopers.application.support.dlq;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.loopers.application.service.DlqService;
 import com.loopers.interfaces.consumer.support.DlqPublisher;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

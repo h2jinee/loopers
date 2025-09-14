@@ -1,4 +1,4 @@
-package com.loopers.application.service;
+package com.loopers.application.ranking;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,4 +1,4 @@
-package com.loopers.application.service.dto;
+package com.loopers.application.ranking.dto;
 
 import lombok.Getter;
 import lombok.ToString;

@@ -1,6 +1,6 @@
-package com.loopers.application.service;
+package com.loopers.application.ranking;
 
-import com.loopers.application.service.dto.RankingBatchAggregation;
+import com.loopers.application.ranking.dto.RankingBatchAggregation;
 import com.loopers.infrastructure.redis.RankingRedisRepository;
 import com.loopers.kafka.message.KafkaEventMessage;
 import com.loopers.kafka.message.payload.CatalogEventPayload;

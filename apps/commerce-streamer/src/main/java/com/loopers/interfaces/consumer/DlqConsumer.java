@@ -1,6 +1,6 @@
 package com.loopers.interfaces.consumer;
 
-import com.loopers.application.handler.DlqEventHandler;
+import com.loopers.application.support.dlq.DlqEventHandler;
 import com.loopers.interfaces.consumer.support.DlqPublisher;
 import com.loopers.kafka.KafkaTopics;
 import lombok.RequiredArgsConstructor;

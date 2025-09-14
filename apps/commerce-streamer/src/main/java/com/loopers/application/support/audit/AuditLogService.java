@@ -1,6 +1,6 @@
-package com.loopers.application.service;
+package com.loopers.application.support.audit;
 
-import com.loopers.application.service.dto.EventLogRequest;
+import com.loopers.application.support.event.dto.EventLogRequest;
 import com.loopers.domain.event.EventLog;
 import com.loopers.domain.event.EventLogRepository;
 import jakarta.transaction.Transactional;

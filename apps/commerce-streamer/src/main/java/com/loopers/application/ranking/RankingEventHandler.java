@@ -1,8 +1,7 @@
-package com.loopers.application.handler;
+package com.loopers.application.ranking;
 
-import com.loopers.application.service.EventProcessingService;
-import com.loopers.application.service.RankingService;
-import com.loopers.application.service.dto.RankingBatchAggregation;
+import com.loopers.application.support.event.EventProcessingService;
+import com.loopers.application.ranking.dto.RankingBatchAggregation;
 import com.loopers.kafka.message.KafkaEventMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

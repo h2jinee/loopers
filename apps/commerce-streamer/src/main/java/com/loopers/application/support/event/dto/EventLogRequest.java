@@ -1,4 +1,4 @@
-package com.loopers.application.service.dto;
+package com.loopers.application.support.event.dto;
 
 import lombok.Builder;
 import lombok.Getter;

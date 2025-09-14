@@ -1,7 +1,6 @@
-package com.loopers.application.handler;
+package com.loopers.application.support.cache;
 
-import com.loopers.application.service.CacheEvictionService;
-import com.loopers.application.service.EventProcessingService;
+import com.loopers.application.support.event.EventProcessingService;
 import com.loopers.kafka.message.KafkaEventMessage;
 import com.loopers.kafka.message.payload.CatalogEventPayload;
 import lombok.RequiredArgsConstructor;

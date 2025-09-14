@@ -1,6 +1,6 @@
 package com.loopers.interfaces.consumer;
 
-import com.loopers.application.handler.RankingEventHandler;
+import com.loopers.application.ranking.RankingEventHandler;
 import com.loopers.interfaces.consumer.support.DlqPublisher;
 import com.loopers.kafka.KafkaTopics;
 import com.loopers.kafka.message.KafkaEventMessage;
