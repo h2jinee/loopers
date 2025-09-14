@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -45,11 +46,13 @@ public class RankingFacade {
         Map<Long, ProductInfo> productMap = productService.getProductsByIds(productIds);
 
         // 3. 결과 조합
-        return rankings.stream()
-            .map(ranking -> {
-                ProductInfo product = productMap.get(ranking.productId());
-                return RankingResult.from(ranking, product);
-            })
-            .toList();
+		return rankings.stream()
+			.map(ranking -> {
+				ProductInfo product = productMap.get(ranking.productId());
+				if (product == null) return null;
+				return RankingResult.from(ranking, product);
+			})
+			.filter(Objects::nonNull)
+			.toList();
     }
 }
