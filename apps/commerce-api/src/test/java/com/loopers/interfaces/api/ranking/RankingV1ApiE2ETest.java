@@ -48,29 +48,6 @@ class RankingV1ApiE2ETest {
     class getRankings {
         private final String ENDPOINT = "/api/v1/rankings";
 
-        @DisplayName("날짜 파라미터 없이 요청하면 오늘 랭킹을 반환한다")
-        @Test
-        void returnsTodayRanking_whenNoDateProvided() {
-            // act
-            ParameterizedTypeReference<ApiResponse<List<RankingDto.V1.GetList.Response>>> responseType =
-                new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<List<RankingDto.V1.GetList.Response>>> response =
-                testRestTemplate.exchange(ENDPOINT, HttpMethod.GET, null, responseType);
-
-            // assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-
-            ApiResponse<List<RankingDto.V1.GetList.Response>> body = response.getBody();
-            assertThat(body).isNotNull();
-            assertThat(body.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
-
-            List<RankingDto.V1.GetList.Response> rankings = body.data();
-            assertThat(rankings)
-                .hasSize(3)
-                .extracting("rank")
-                .containsExactly(1, 2, 3);
-        }
-
         @DisplayName("특정 날짜를 지정하면 해당 날짜 랭킹을 반환한다")
         @Test
         void returnsSpecificDateRanking_whenDateProvided() {

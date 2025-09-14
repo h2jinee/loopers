@@ -14,10 +14,10 @@ public interface RankingV1ApiSpec {
 
     @Operation(
         summary = "일별 랭킹 조회",
-        description = "특정 날짜의 상품 랭킹을 조회합니다. 날짜를 지정하지 않으면 오늘 랭킹을 반환합니다."
+		description = "특정 날짜의 상품 랭킹을 조회합니다."
     )
     ApiResponse<List<RankingDto.V1.GetList.Response>> getRankings(
-        @Parameter(description = "조회할 날짜 (yyyyMMdd 형식)", example = "20250911")
+		@Parameter(description = "조회할 날짜", required = true, example = "20250911")
         @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
 
         @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")

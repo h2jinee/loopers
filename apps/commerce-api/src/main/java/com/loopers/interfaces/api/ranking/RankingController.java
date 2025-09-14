@@ -21,7 +21,7 @@ public class RankingController implements RankingV1ApiSpec {
     @GetMapping
     @Override
     public ApiResponse<List<RankingDto.V1.GetList.Response>> getRankings(
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
+		@RequestParam @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
         @RequestParam(required = false, defaultValue = "0") Integer page,
         @RequestParam(required = false, defaultValue = "20") Integer size
     ) {
