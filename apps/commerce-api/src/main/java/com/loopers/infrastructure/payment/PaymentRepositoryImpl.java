@@ -42,4 +42,9 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     public Page<Payment> findByStatusAndCreatedBefore(PaymentStatus status, ZonedDateTime dateTime, Pageable pageable) {
         return jpaRepository.findByStatusAndCreatedAtBefore(status, dateTime, pageable);
     }
+    
+    @Override
+    public boolean existsCompletedPaymentForOrder(Long orderId) {
+        return jpaRepository.existsByOrderIdAndStatus(orderId, PaymentStatus.COMPLETED);
+    }
 }

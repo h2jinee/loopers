@@ -30,6 +30,10 @@ public class PaymentService {
         Money amount,
         CardInfo cardInfo
     ) {
+        if (paymentRepository.existsCompletedPaymentForOrder(orderId)) {
+            throw new IllegalStateException("주문 " + orderId + "에 대한 결제가 이미 완료되었습니다.");
+        }
+        
         PgPaymentCommand command = new PgPaymentCommand(
             orderId,
             userId,
