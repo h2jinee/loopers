@@ -45,7 +45,7 @@ class RankingV1ApiE2ETest {
 
     @DisplayName("GET /api/v1/rankings")
     @Nested
-    class getRankings {
+    class GetRankings {
         private final String ENDPOINT = "/api/v1/rankings";
 
         @DisplayName("특정 날짜를 지정하면 해당 날짜 랭킹을 반환한다")
@@ -56,7 +56,7 @@ class RankingV1ApiE2ETest {
             String yesterdayKey = "ranking:all:" + yesterday.format(DATE_FORMAT);
             redisTemplate.opsForZSet().add(yesterdayKey, "10", 500.0);
 
-            String url = ENDPOINT + "?date=" + yesterday.format(DATE_FORMAT);
+            String url = ENDPOINT + "?period=daily&date=" + yesterday.format(DATE_FORMAT);
 
             // act
             ParameterizedTypeReference<ApiResponse<List<RankingDto.V1.GetList.Response>>> responseType =
@@ -69,7 +69,7 @@ class RankingV1ApiE2ETest {
 
             List<RankingDto.V1.GetList.Response> rankings = response.getBody().data();
             assertThat(rankings)
-                .hasSize(1)
+                .hasSize(4) // 테스트 시 DB에 데이터 4개만 있어서 사이즈 4로 테스트
                 .first()
                 .satisfies(ranking -> {
                     assertThat(ranking.rank()).isEqualTo(1);
@@ -82,7 +82,8 @@ class RankingV1ApiE2ETest {
         @Test
         void returnsPaginatedResults_whenPageParametersProvided() {
             // arrange
-            String url = ENDPOINT + "?page=0&size=2";
+            LocalDate today = LocalDate.now();
+            String url = ENDPOINT + "?period=daily&date=" + today.format(DATE_FORMAT) + "&page=0&size=2";
 
             // act
             ParameterizedTypeReference<ApiResponse<List<RankingDto.V1.GetList.Response>>> responseType =
@@ -105,7 +106,7 @@ class RankingV1ApiE2ETest {
         void returnsEmptyList_whenNoDataExists() {
             // arrange
             LocalDate future = LocalDate.now().plusDays(100);
-            String url = ENDPOINT + "?date=" + future.format(DATE_FORMAT);
+            String url = ENDPOINT + "?period=daily&date=" + future.format(DATE_FORMAT);
 
             // act
             ParameterizedTypeReference<ApiResponse<List<RankingDto.V1.GetList.Response>>> responseType =
