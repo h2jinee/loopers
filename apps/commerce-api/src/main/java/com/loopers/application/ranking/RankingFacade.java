@@ -28,6 +28,7 @@ public class RankingFacade {
         // 1. 랭킹 조회
         List<RankingInfo> rankings = rankingService.getRankings(
             new RankingCommand.GetList(
+                criteria.period(),
                 criteria.date(),
                 criteria.page(),
                 criteria.size()
@@ -49,7 +50,6 @@ public class RankingFacade {
 		return rankings.stream()
 			.map(ranking -> {
 				ProductInfo product = productMap.get(ranking.productId());
-				if (product == null) return null;
 				return RankingResult.from(ranking, product);
 			})
 			.filter(Objects::nonNull)
