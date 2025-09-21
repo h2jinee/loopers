@@ -18,4 +18,6 @@ public interface PaymentRepository {
     List<Payment> findByUserId(String userId);
     
     Page<Payment> findByStatusAndCreatedBefore(PaymentStatus status, ZonedDateTime dateTime, Pageable pageable);
+    
+    boolean existsCompletedPaymentForOrder(Long orderId);
 }

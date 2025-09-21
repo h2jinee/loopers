@@ -31,13 +31,13 @@ public class KafkaConfig {
     public static final int MAX_POLL_INTERVAL_MS = 2 * 60 * 1000;
 
     @Bean
-    public ProducerFactory<Object, Object> producerFactory(KafkaProperties kafkaProperties) {
+    public ProducerFactory<String, Object> producerFactory(KafkaProperties kafkaProperties) {
         Map<String, Object> props = new HashMap<>(kafkaProperties.buildProducerProperties());
         return new DefaultKafkaProducerFactory<>(props);
     }
 
     @Bean
-    public ConsumerFactory<Object, Object> consumerFactory(KafkaProperties kafkaProperties) {
+    public ConsumerFactory<String, Object> consumerFactory(KafkaProperties kafkaProperties) {
         Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties());
 
         props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, SESSION_TIMEOUT_MS);
@@ -48,7 +48,7 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTemplate<Object, Object> kafkaTemplate(ProducerFactory<Object, Object> producerFactory) {
+    public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
 
@@ -58,7 +58,7 @@ public class KafkaConfig {
     }
 
     @Bean(name = BATCH_LISTENER)
-    public ConcurrentKafkaListenerContainerFactory<Object, Object> defaultBatchListenerContainerFactory(
+    public ConcurrentKafkaListenerContainerFactory<String, Object> defaultBatchListenerContainerFactory(
         KafkaProperties kafkaProperties,
         RecordMessageConverter jsonMessageConverter
     ) {
@@ -71,7 +71,7 @@ public class KafkaConfig {
         consumerConfig.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, HEARTBEAT_INTERVAL_MS);
         consumerConfig.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, MAX_POLL_INTERVAL_MS);
 
-        ConcurrentKafkaListenerContainerFactory<Object, Object> factory =
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
             new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(consumerConfig));
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
@@ -83,14 +83,15 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<Object, Object> kafkaListenerContainerFactory(
-        ConsumerFactory<Object, Object> consumerFactory,
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(
+        ConsumerFactory<String, Object> consumerFactory,
         RecordMessageConverter jsonMessageConverter
     ) {
-        ConcurrentKafkaListenerContainerFactory<Object, Object> factory =
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
             new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        factory.setBatchListener(false); // 단일 메시지 처리
         factory.setRecordMessageConverter(jsonMessageConverter);
 
         return factory;

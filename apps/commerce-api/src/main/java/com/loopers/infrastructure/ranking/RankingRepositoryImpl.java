@@ -2,8 +2,12 @@ package com.loopers.infrastructure.ranking;
 
 import com.loopers.domain.ranking.RankingInfo;
 import com.loopers.domain.ranking.RankingRepository;
+import com.loopers.domain.ranking.WeeklyRanking;
+import com.loopers.domain.ranking.MonthlyRanking;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Repository;
@@ -18,6 +22,8 @@ import java.util.*;
 public class RankingRepositoryImpl implements RankingRepository {
 
     private final RedisTemplate<String, String> redisTemplate;
+    private final WeeklyRankingJpaRepository weeklyRepository;
+    private final MonthlyRankingJpaRepository monthlyRepository;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
 
     @Override
@@ -57,8 +63,37 @@ public class RankingRepositoryImpl implements RankingRepository {
     public Long getProductRank(Long productId, LocalDate date) {
         String key = generateKey(date);
         Long rank = redisTemplate.opsForZSet().reverseRank(key, productId.toString());
-
         return rank != null ? rank + 1 : null;
+    }
+
+    @Override
+    public List<RankingInfo> getWeeklyRankings(LocalDate date, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        List<WeeklyRanking> rankings = weeklyRepository.findByPeriodEnd(date, pageable);
+
+        List<RankingInfo> result = new ArrayList<>();
+        int rank = page * size + 1;
+
+        for (WeeklyRanking mv : rankings) {
+            result.add(RankingInfo.of(rank++, mv.getProductId(), mv.getScore()));
+        }
+
+        return result;
+    }
+
+    @Override
+    public List<RankingInfo> getMonthlyRankings(LocalDate date, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        List<MonthlyRanking> rankings = monthlyRepository.findByPeriodEnd(date, pageable);
+
+        List<RankingInfo> result = new ArrayList<>();
+        int rank = page * size + 1;
+
+        for (MonthlyRanking mv : rankings) {
+            result.add(RankingInfo.of(rank++, mv.getProductId(), mv.getScore()));
+        }
+
+        return result;
     }
 
     private String generateKey(LocalDate date) {

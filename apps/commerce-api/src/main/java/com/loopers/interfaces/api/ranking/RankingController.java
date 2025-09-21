@@ -3,6 +3,7 @@ package com.loopers.interfaces.api.ranking;
 import com.loopers.application.ranking.RankingCriteria;
 import com.loopers.application.ranking.RankingFacade;
 import com.loopers.application.ranking.RankingResult;
+import com.loopers.domain.ranking.PeriodType;
 import com.loopers.interfaces.api.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,11 +22,12 @@ public class RankingController implements RankingV1ApiSpec {
     @GetMapping
     @Override
     public ApiResponse<List<RankingDto.V1.GetList.Response>> getRankings(
+        @RequestParam String period,
 		@RequestParam @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
         @RequestParam(required = false, defaultValue = "0") Integer page,
         @RequestParam(required = false, defaultValue = "20") Integer size
     ) {
-        RankingCriteria criteria = new RankingCriteria(date, page, size);
+        RankingCriteria criteria = new RankingCriteria(PeriodType.from(period), date, page, size);
         List<RankingResult> rankings = rankingFacade.getRankingsWithProducts(criteria);
 
         List<RankingDto.V1.GetList.Response> response = rankings.stream()

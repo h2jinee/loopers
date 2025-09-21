@@ -17,4 +17,6 @@ public interface PaymentJpaRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByUserId(String userId);
     
     Page<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, ZonedDateTime dateTime, Pageable pageable);
+    
+    boolean existsByOrderIdAndStatus(Long orderId, PaymentStatus status);
 }

@@ -18,7 +18,11 @@ public class RankingService {
      * 랭킹 조회
      */
     public List<RankingInfo> getRankings(RankingCommand.GetList command) {
-        return rankingRepository.getRankings(command.date(), command.page(), command.size());
+        return switch (command.period()) {
+            case DAILY -> rankingRepository.getRankings(command.date(), command.page(), command.size());
+            case WEEKLY -> rankingRepository.getWeeklyRankings(command.date(), command.page(), command.size());
+            case MONTHLY -> rankingRepository.getMonthlyRankings(command.date(), command.page(), command.size());
+        };
     }
 
     /**
